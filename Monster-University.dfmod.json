@@ -1,0 +1,27 @@
+{
+    "ModTitle": "Monster-University",
+    "ModVersion": "1.0.0",
+    "ModAuthor": "DunnyOfPenwick",
+    "ContactInfo": "http://dfworkshop.net",
+    "DFUnity_Version": "1.0.0",
+    "ModDescription": "Fleshes out enemies with characteristic senses, stat/ability refinements, and additional combat logic.",
+    "GUID": "2e537e97-342f-41ca-9e39-96df405fe894",
+    "Files": [
+        "Assets/Game/Mods/Monster-University/Scripts/MonsterUniversityMod.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/Equipment.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/Skills.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/Spells.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/Stats.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/EntityConcealmentBehaviourMU.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/Utility.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/EnemyMotorEnhancement.cs",
+        "Assets/Game/Mods/Monster-University/Scripts/EnemySensesEnhancement.cs"
+    ],
+    "Dependencies": [
+        {
+            "Name": "first-person-lighting",
+            "IsOptional": false,
+            "IsPeer": true
+        }
+    ]
+}
