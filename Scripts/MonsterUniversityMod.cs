@@ -11,7 +11,7 @@ using DaggerfallWorkshop.Game.Entity;
 using DaggerfallConnect;
 using DaggerfallWorkshop.Game.Serialization;
 using DaggerfallWorkshop.Utility;
-using DaggerfallWorkshop.Game.Utility.ModSupport.ModSettings;
+
 
 namespace MonsterUniversity
 {

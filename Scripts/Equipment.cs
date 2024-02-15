@@ -29,11 +29,15 @@ namespace MonsterUniversity
             for (int i = 0; i < entity.Items.Count; ++i)
             {
                 DaggerfallUnityItem item = entity.Items.GetItem(i);
+
                 if (ShouldEquip(entity, item))
                 {
                     EquipSlots slot = GetSlot(entity.ItemEquipTable, item);
-                    entity.ItemEquipTable.UnequipItem(slot);
-                    entity.ItemEquipTable.EquipItem(item, true, false);
+                    if (slot != EquipSlots.None)
+                    {
+                        entity.ItemEquipTable.UnequipItem(slot);
+                        entity.ItemEquipTable.EquipItem(item, true, false);
+                    }
                 }
             }
         }
