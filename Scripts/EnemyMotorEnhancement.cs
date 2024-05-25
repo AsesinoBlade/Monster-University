@@ -3,13 +3,13 @@
 // Origin Date: January 2024
 
 
+using System.Collections.Generic;
+using UnityEngine;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
-using System.Collections.Generic;
-using UnityEngine;
 
 
 namespace MonsterUniversity
@@ -17,11 +17,11 @@ namespace MonsterUniversity
 
     public class EnemyMotorEnhancement : MonoBehaviour
     {
-        EnemyMotor enemyMotor;
-        DaggerfallEntityBehaviour entityBehaviour;
+        EnemyMotor motor;
+        DaggerfallEntityBehaviour behaviour;
         EnemyEntity entity;
         EnemySenses senses;
-        EntityEffectManager entityEffectManager;
+        EntityEffectManager effectManager;
         MobileUnit mobile;
         EnemyMotor.TakeActionCallback originalTakeActionCallback;
 
@@ -36,6 +36,7 @@ namespace MonsterUniversity
         EffectBundleSettings slowfallSpell = new EffectBundleSettings();
         EffectBundleSettings levitateSpell = new EffectBundleSettings();
         EffectBundleSettings freeActionSpell = new EffectBundleSettings();
+        EffectBundleSettings lightSpell = new EffectBundleSettings();
 
         float lastHealCheck;
 
@@ -44,43 +45,48 @@ namespace MonsterUniversity
         // Start is called before the first frame update
         void Start()
         {
-            enemyMotor = GetComponent<EnemyMotor>();
-            entityBehaviour = GetComponent<DaggerfallEntityBehaviour>();
-            entity = entityBehaviour.Entity as EnemyEntity;
+            motor = GetComponent<EnemyMotor>();
+            behaviour = GetComponent<DaggerfallEntityBehaviour>();
+            entity = behaviour.Entity as EnemyEntity;
             senses = GetComponent<EnemySenses>();
-            entityEffectManager = GetComponent<EntityEffectManager>();
+            effectManager = GetComponent<EntityEffectManager>();
             mobile = GetComponentInChildren<MobileUnit>();
 
             //Set delegate custom behaviour
-            originalTakeActionCallback = enemyMotor.TakeActionHandler;
-            enemyMotor.TakeActionHandler = TakeAction;
-            enemyMotor.CanCastRangedSpellHandler = CanCastRangedSpell;
-            enemyMotor.CanCastTouchSpellHandler = CanCastTouchSpell;
+            originalTakeActionCallback = motor.TakeActionHandler;
+            motor.TakeActionHandler = TakeAction;
+            motor.CanCastRangedSpellHandler = CanCastRangedSpell;
+            motor.CanCastTouchSpellHandler = CanCastTouchSpell;
 
             //In vanilla daggerfall, player-character skill level is used to determine magic casting
-            //costs for enemies (presumably a bug).  We will let enemy skills be used instead.
-            EntityEffectManager effectManager = GetComponent<EntityEffectManager>();
+            //costs for enemies.  We will let enemy skills be used instead.
             effectManager.UsePlayerCharacterSkillsForEnemyMagicCost = false;
 
             ClassifySpells();
         }
 
 
-        // Update is called once per frame
         void Update()
         {
+            if (GameManager.IsGamePaused)
+                return;
 
+            if (Time.frameCount % 50 == 0)
+            {
+                //Check if falling and cast slowfall/levitate if necessary.
+                TryCastFallingSpell();
+
+                //This likely won't get triggered as enemy can't act while paralyzed.
+                //This might be modified later.
+                if (TryCastFreeAction())
+                    return;
+            }
         }
 
 
         void TakeAction()
         {
-            if (TryCastFallingSpell())
-                return;
-
-            if (TryCastFreeAction())
-                return;
-
+            //Check if enemy might surrender.
             if (Surrenders())
                 return;
 
@@ -89,6 +95,9 @@ namespace MonsterUniversity
 
 
             if (TryCastCombatPrepSpell())
+                return;
+
+            if (TryCastLightSpell())
                 return;
 
             if (TryCastHealSpell())
@@ -105,6 +114,9 @@ namespace MonsterUniversity
             if (entity.CurrentMagicka <= 0)
                 return false;
 
+            if (senses.Target == null)
+                return false;
+
             EffectBundleSettings spell = new EffectBundleSettings();
 
             //Check if an area effect spell is desired.
@@ -113,18 +125,18 @@ namespace MonsterUniversity
                 int allyCount = 0;
                 int enemyCount = 0;
                 List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(senses.Target.transform.position, 4.3f);
-                foreach (DaggerfallEntityBehaviour behaviour in entities)
+                foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
                 {
-                    if (behaviour == entityBehaviour)
+                    if (targetBehaviour == behaviour)
                         continue;
-                    else if (entity.Team == MobileTeams.PlayerAlly && behaviour.EntityType == EntityTypes.Player)
+                    else if (entity.Team == MobileTeams.PlayerAlly && targetBehaviour.EntityType == EntityTypes.Player)
                         ++allyCount;
-                    else if (behaviour.Entity.Team == entity.Team)
+                    else if (targetBehaviour.Entity.Team == entity.Team)
                         ++allyCount;
                     else if (entity.Team == MobileTeams.PlayerAlly)
                     {
-                        EnemyMotor motor = behaviour.GetComponent<EnemyMotor>();
-                        if (motor && motor.IsHostile) //pacified enemies don't count as enemies to player allies
+                        EnemyMotor targetMotor = targetBehaviour.GetComponent<EnemyMotor>();
+                        if (targetMotor && targetMotor.IsHostile) //pacified enemies don't count as enemies to player allies
                             ++enemyCount;
                     }
                     else
@@ -141,14 +153,14 @@ namespace MonsterUniversity
 
             if (spell.BundleType != BundleTypes.None)
             {
-                enemyMotor.SelectedSpell = new EntityEffectBundle(spell, entityBehaviour);
+                motor.SelectedSpell = new EntityEffectBundle(spell, behaviour);
 
-                if (enemyMotor.EffectsAlreadyOnTarget(enemyMotor.SelectedSpell))
+                if (motor.EffectsAlreadyOnTarget(motor.SelectedSpell))
                     return false;
 
                 // Check that there is a clear path to shoot a spell
                 // All range spells are currently 25 speed and 0.45f radius
-                return enemyMotor.HasClearPathToShootProjectile(25f, DaggerfallMissile.ArmLength, 0.45f);
+                return motor.HasClearPathToShootProjectile(25f, DaggerfallMissile.ArmLength, 0.45f);
             }
             else
             {
@@ -168,21 +180,23 @@ namespace MonsterUniversity
             //Check if an caster-area effect spell is desired.
             if (areaAttackSpells.Count > 0)
             {
+                //EffectBundleSettings offering = areaAttackSpells[Random.Range(0, areaAttackSpells.Count)];
+
                 int allyCount = 0;
                 int enemyCount = 0;
                 List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(transform.position, 4.3f);
-                foreach (DaggerfallEntityBehaviour behaviour in entities)
+                foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
                 {
-                    if (behaviour == entityBehaviour)
+                    if (targetBehaviour == behaviour)
                         continue;
-                    else if (entity.Team == MobileTeams.PlayerAlly && behaviour.EntityType == EntityTypes.Player)
+                    else if (entity.Team == MobileTeams.PlayerAlly && targetBehaviour.EntityType == EntityTypes.Player)
                         ++allyCount;
-                    else if (behaviour.Entity.Team == entity.Team)
+                    else if (targetBehaviour.Entity.Team == entity.Team)
                         ++allyCount;
                     else if (entity.Team == MobileTeams.PlayerAlly)
                     {
-                        EnemyMotor motor = behaviour.GetComponent<EnemyMotor>();
-                        if (motor && motor.IsHostile) //pacified enemies don't count as enemies to player allies
+                        EnemyMotor targetMotor = targetBehaviour.GetComponent<EnemyMotor>();
+                        if (targetMotor && targetMotor.IsHostile) //pacified enemies don't count as enemies to player allies
                             ++enemyCount;
                     }
                     else
@@ -199,9 +213,9 @@ namespace MonsterUniversity
 
             if (spell.BundleType != BundleTypes.None)
             {
-                enemyMotor.SelectedSpell = new EntityEffectBundle(spell, entityBehaviour);
+                motor.SelectedSpell = new EntityEffectBundle(spell, behaviour);
 
-                return !enemyMotor.EffectsAlreadyOnTarget(enemyMotor.SelectedSpell);
+                return !motor.EffectsAlreadyOnTarget(motor.SelectedSpell);
             }
             else
             {
@@ -211,24 +225,25 @@ namespace MonsterUniversity
         }
 
 
+        int AnalyzeTargetEffect(DaggerfallEntityBehaviour target, )
 
         /// <summary>
-        /// Check if a slowfall or levitate spell is needed and available, and cast it if so.
+        /// Check if a slowfall or levitate spell is needed and available.
         /// </summary>
         bool TryCastFallingSpell()
         {
-            if (enemyMotor.Falls && !entity.IsSlowFalling && !entity.IsParalyzed)
+            if (motor.Falls && !entity.IsSlowFalling && !entity.IsParalyzed)
             {
-                if (enemyMotor.LastGroundedY - transform.position.y < 5)
-                    return false;  //We haven't fallen far enough yet.  Don't instant-cast...
+                if (motor.LastGroundedY - transform.position.y < 5)
+                    return false;  //We haven't fallen far enough yet.  Don't cast...
 
-                if (slowfallSpell.BundleType != BundleTypes.None)
-                {
-                    return TryCast(slowfallSpell);
-                }
-                else if (levitateSpell.BundleType != BundleTypes.None)
+                if (levitateSpell.BundleType != BundleTypes.None)
                 {
                     return TryCast(levitateSpell);
+                }
+                else if (slowfallSpell.BundleType != BundleTypes.None)
+                {
+                    return TryCast(slowfallSpell);
                 }
             }
 
@@ -237,7 +252,7 @@ namespace MonsterUniversity
 
 
         /// <summary>
-        /// Check if a free-action spell is needed and available.  Cast it if so.
+        /// Check if a free-action spell is needed and available.
         /// </summary>
         bool TryCastFreeAction()
         {
@@ -245,7 +260,7 @@ namespace MonsterUniversity
                 return false;
 
             if (mobile.IsPlayingOneShot())
-                return false; //If paralyzed while playing a one-shot, they're just screwed.
+                return false;
 
             if (freeActionSpell.BundleType == BundleTypes.None)
                 return false;
@@ -264,7 +279,7 @@ namespace MonsterUniversity
         {
             MobileTypes.Centaur, MobileTypes.Dragonling, MobileTypes.Dreugh, MobileTypes.Gargoyle, MobileTypes.GrizzlyBear,
             MobileTypes.Harpy, MobileTypes.Imp, MobileTypes.Lamia, MobileTypes.Nymph, MobileTypes.Orc, MobileTypes.OrcSergeant,
-            MobileTypes.OrcShaman, MobileTypes.OrcWarlord, MobileTypes.Spriggan
+            MobileTypes.OrcShaman, MobileTypes.Spriggan
         };
 
         /// <summary>
@@ -272,27 +287,17 @@ namespace MonsterUniversity
         /// </summary>
         bool Surrenders()
         {
-            if (!enemyMotor.CanAct)
+            if (!motor.CanAct)
                 return false;
 
             if (mobile.IsPlayingOneShot())
                 return false;
 
-            //A lone healer will likely surrender/flee regardless of current health.
-            //Others use health-based criteria.
             if (entity.CurrentHealth > entity.MaxHealth / 5)
                 return false;
 
             //Don't surrender if a heal spell can be cast.
-            if (healSpell.BundleType != BundleTypes.None && entity.CurrentMagicka > 10)
-                return false;
-
-            //Most monsters, and human knights/barbarians, never surrender.
-            bool canSurrender = entity.EntityType == EntityTypes.EnemyClass;
-            canSurrender ^= entity.MobileEnemy.ID == (int)MobileTypes.Knight;
-            canSurrender ^= entity.MobileEnemy.ID == (int)MobileTypes.Barbarian;
-            canSurrender |= monstersThatSurrender.Contains((MobileTypes)entity.MobileEnemy.ID);
-            if (!canSurrender)
+            if (healSpell.BundleType != BundleTypes.None && entity.CurrentMagicka > 15)
                 return false;
 
             //Quest enemies don't surrender.
@@ -300,7 +305,7 @@ namespace MonsterUniversity
                 return false;
 
             //Only half of enemies that can surrender/flee actually do.
-            DaggerfallEnemy dfEnemy = entityBehaviour.GetComponent<DaggerfallEnemy>();
+            DaggerfallEnemy dfEnemy = behaviour.GetComponent<DaggerfallEnemy>();
             if (dfEnemy && dfEnemy.LoadID % 2 == 0)
                 return false;
 
@@ -308,30 +313,27 @@ namespace MonsterUniversity
             if (Random.Range(0f, 1.5f) > Time.smoothDeltaTime)
                 return false;
 
-            if (TryCastEscapeSpell())
-                return true;
+            //Most monsters, and human knights/barbarians, never surrender.
+            bool canSurrender = entity.EntityType == EntityTypes.EnemyClass;
+            canSurrender ^= entity.MobileEnemy.ID == (int)MobileTypes.Knight;
+            canSurrender ^= entity.MobileEnemy.ID == (int)MobileTypes.Barbarian;
+            canSurrender |= monstersThatSurrender.Contains((MobileTypes)entity.MobileEnemy.ID);
+            canSurrender |= entity.MobileEnemy.ID == 256; //Goblin, expanded enemies
+            if (!canSurrender)
+                return false;
 
             //Making creature non-hostile.
             if (entity.Team != MobileTeams.PlayerAlly)
-                enemyMotor.IsHostile = false;
+                motor.IsHostile = false;
 
-            /*
-            DaggerfallEntityBehaviour closest = GetClosestEnemy(7);
-            if (closest == null)
-                return true;
-
-            destination = closest.transform.position;
-            Vector3 direction = (closest.transform.position - transform.position).normalized;
-            float moveSpeed = (entity.Stats.LiveSpeed + PlayerSpeedChanger.dfWalkBase) * MeshReader.GlobalScale;
-            AttemptMove(direction, moveSpeed, true);
-            */
+            TryCastEscapeSpell();
 
             return true;
         }
 
 
         /// <summary>
-        /// Check if a concealment spell is needed and available.  Cast it if so.
+        /// Check if a concealment spell is needed and available.
         /// </summary>
         bool TryCastEscapeSpell()
         {
@@ -359,7 +361,7 @@ namespace MonsterUniversity
         /// </summary>
         bool TryCastCombatPrepSpell()
         {
-            if (!enemyMotor.CanAct || mobile.IsPlayingOneShot())
+            if (!motor.CanAct || mobile.IsPlayingOneShot())
                 return false;
 
             if (combatPrepSpell.BundleType == BundleTypes.None)
@@ -372,13 +374,40 @@ namespace MonsterUniversity
                 return false; //Player allies will conserve magicka for offense.
 
             //Add a random amount of delay...
-            if (Random.Range(0f, 1.4f) > Time.smoothDeltaTime)
+            if (Random.Range(0f, 1.6f) > Time.smoothDeltaTime)
                 return false;
 
             if (IsSpellActive(combatPrepSpell))
                 return false;
 
             return TryCast(combatPrepSpell);
+        }
+
+
+        /// <summary>
+        /// Check if a light spell is available and needed.
+        /// </summary>
+        bool TryCastLightSpell()
+        {
+            if (lightSpell.BundleType == BundleTypes.None)
+                return false;
+
+            if (Time.frameCount % 20 != 0)
+                return false; //only checking occasionally
+
+            if (senses.Target == null)
+                return false;
+
+            if (!motor.CanAct || mobile.IsPlayingOneShot())
+                return false;
+
+            if (IsSpellActive(lightSpell))
+                return false;
+
+            if (MonsterUniversityMod.Instance.GetLightingOnEntity(senses.Target).grayscale > 0.15f)
+                return false; //enough light
+
+            return TryCast(lightSpell);
         }
 
 
@@ -392,7 +421,7 @@ namespace MonsterUniversity
 
             lastHealCheck = Time.time;
 
-            if (!enemyMotor.CanAct || mobile.IsPlayingOneShot())
+            if (!motor.CanAct || mobile.IsPlayingOneShot())
                 return false;
 
             return TryCastHealArea() || TryCastHealSelf();
@@ -410,6 +439,9 @@ namespace MonsterUniversity
             if (entity.CurrentHealth > entity.MaxHealth / 3)
                 return false;
 
+            if (IsSpellActive(healSpell))
+                return false;
+
             return TryCast(healSpell);
         }
 
@@ -423,20 +455,20 @@ namespace MonsterUniversity
                 return false;
 
             //The area of effect should be 4, as per DaggerfallMissile.cs ExplosionRadius
-            List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(transform.position, 4.3f);
+            List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(transform.position, 4.2f);
 
             int allies = 0;
             int enemies = 0;
 
-            foreach (DaggerfallEntityBehaviour behaviour in entities)
+            foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
             {
-                if (behaviour == entityBehaviour)
+                bool needsHealing = targetBehaviour.Entity.CurrentHealth > 0.6f * targetBehaviour.Entity.MaxHealth;
+
+                if (targetBehaviour == behaviour)
                     continue;
-                else if (behaviour.Entity.CurrentHealth > 0.7f * behaviour.Entity.MaxHealth)
-                    continue;
-                else if (behaviour.Entity.Team == entity.Team)
+                else if (targetBehaviour.Entity.Team == entity.Team && needsHealing)
                     ++allies;
-                else if (entity.Team == MobileTeams.PlayerAlly && behaviour.EntityType == EntityTypes.Player)
+                else if (entity.Team == MobileTeams.PlayerAlly && targetBehaviour.EntityType == EntityTypes.Player && needsHealing)
                     ++allies;
                 else
                     ++enemies;
@@ -454,18 +486,21 @@ namespace MonsterUniversity
         /// </summary>
         bool TryCastLevitateSpell()
         {
-            if (!enemyMotor.CanAct || mobile.IsPlayingOneShot())
+            if (!motor.CanAct || mobile.IsPlayingOneShot())
                 return false;
 
             if (!senses.Target || !senses.TargetInSight || senses.LastKnownTargetPos == EnemySenses.ResetPlayerPos)
                 return false;
 
-            if (enemyMotor.IsLevitating)
+            if (motor.IsLevitating)
                 return false;
 
-            Vector3 targetVector = (senses.LastKnownTargetPos - entityBehaviour.transform.position);
+            Vector3 targetVector = (senses.LastKnownTargetPos - behaviour.transform.position);
 
-            if (Mathf.Abs(targetVector.y) < 4 || !enemyMotor.ObstacleDetected)
+            if (Mathf.Abs(targetVector.y) < 5)
+                return false;
+
+            if (HasPossibleWalkingPathToTarget())
                 return false;
 
             //Our quarry is significantly above or below.  See if a levitate spell is available.
@@ -475,6 +510,52 @@ namespace MonsterUniversity
                 return false;
         }
 
+
+        bool HasPossibleWalkingPathToTarget()
+        {
+            if (GameManager.Instance.PlayerEnterExit.IsPlayerSubmerged)
+                return false;
+
+            Vector3 startLocation = transform.position;
+            Vector3 destination = senses.Target.transform.position;
+
+            if (GetAltitude(destination) > 3f)
+                return false;
+
+            //shift upward closer to eye-height to reduce clipping through stairs and what-not
+            startLocation += Vector3.up;
+
+            //checks how close the path is to the floor at various points
+            float distance = Vector3.Distance(startLocation, destination);
+            Vector3 offsetDirection = (destination - startLocation).normalized;
+            float lastAltitude = GetAltitude(startLocation);
+            for (float offset = 0f; offset <= distance; offset += 1f)
+            {
+                Vector3 position = startLocation + offsetDirection * offset;
+                float altitude = GetAltitude(position);
+                if (Mathf.Abs(altitude - lastAltitude) > 1.5f)
+                    return false;
+                lastAltitude = altitude;
+            }
+
+            return true;
+
+        }
+
+
+        /// <summary>
+        /// Returns distance above ground of provided position, maximum of 20.
+        /// </summary>
+        /// <returns>Altitude, maximum of 20</returns>
+        public static float GetAltitude(Vector3 position)
+        {
+            const float maxDistance = 20f;
+
+            if (Physics.Raycast(position, Vector3.down, out RaycastHit hit, maxDistance))
+                return hit.distance;
+
+            return maxDistance;
+        }
 
 
         /// <summary>
@@ -494,10 +575,12 @@ namespace MonsterUniversity
             if (entity.IsSilenced)
                 return false;
 
-            EntityEffectBundle bundle = new EntityEffectBundle(spell, entityBehaviour);
+            EntityEffectBundle bundle = new EntityEffectBundle(spell, behaviour);
 
-            if (entityEffectManager.SetReadySpell(bundle))
+            if (effectManager.SetReadySpell(bundle))
             {
+                //???????????????????????????????
+                DaggerfallUI.AddHUDText("enemy casting " + spell.Name);
                 mobile.ChangeEnemyState(MobileStates.Spell);
 
                 return true;
@@ -513,7 +596,7 @@ namespace MonsterUniversity
         /// </summary>
         bool IsSpellActive(EffectBundleSettings spell)
         {
-            LiveEffectBundle[] bundles = entityEffectManager.EffectBundles;
+            LiveEffectBundle[] bundles = effectManager.EffectBundles;
 
             foreach (LiveEffectBundle bundle in bundles)
             {
@@ -523,35 +606,6 @@ namespace MonsterUniversity
 
             return false;
         }
-
-
-
-        /// <summary>
-        /// Get the closest enemy near this entity, excluding player and player allies.
-        /// </summary>
-        DaggerfallEntityBehaviour GetClosestEnemy(float range)
-        {
-            float closestDistance = float.MaxValue;
-            DaggerfallEntityBehaviour closestEnemy = null;
-
-            foreach (DaggerfallEntityBehaviour behaviour in Utility.GetEntitiesInArea(transform.position, range))
-            {
-                if (behaviour.Entity.Team == entity.Team)
-                    continue;
-                else if (entity.Team == MobileTeams.PlayerAlly && behaviour.EntityType == EntityTypes.Player)
-                    continue;
-
-                float distance = Vector3.Distance(transform.position, behaviour.transform.position);
-                if (distance < closestDistance)
-                {
-                    closestDistance = distance;
-                    closestEnemy = behaviour;
-                }
-            }
-
-            return closestEnemy;
-        }
-
 
 
         /// <summary>
@@ -569,6 +623,8 @@ namespace MonsterUniversity
             {
                 if (spell.Effects[0].Key == HealHealth.EffectKey)
                     healSpell = spell;
+                else if (spell.Effects[0].Key == Regenerate.EffectKey)
+                    healSpell = spell;
                 else if (spell.Effects[0].Key == Spells.HealHealthAreaMU.EffectKey)
                     healAreaSpell = spell;
                 else if (spell.Effects[0].Key == ChameleonNormal.EffectKey)
@@ -577,8 +633,8 @@ namespace MonsterUniversity
                     escapeSpells.Add(spell);
                 else if (spell.Effects[0].Key == InvisibilityNormal.EffectKey)
                     escapeSpells.Add(spell);
-                else if (spell.Effects[0].Key == Spells.EnemyMageLightMU.EffectKey && isInDungeon)
-                    combatPrepSpells.Add(spell);
+                else if (spell.Effects[0].Key == Spells.EnemyMageLightMU.EffectKey)
+                    lightSpell = spell;
                 else if (spell.Effects[0].Key == ChameleonTrue.EffectKey)
                     combatPrepSpells.Add(spell);
                 else if (spell.Effects[0].Key == ShadowTrue.EffectKey && isInDungeon)
@@ -613,6 +669,7 @@ namespace MonsterUniversity
                 combatPrepSpell = combatPrepSpells[pick];
             }
         }
+
 
 
     } //class EnemyMotorEnhancement

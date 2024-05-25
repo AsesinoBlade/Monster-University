@@ -2,9 +2,9 @@
     "ModTitle": "Monster-University",
     "ModVersion": "1.0.0",
     "ModAuthor": "DunnyOfPenwick",
-    "ContactInfo": "http://dfworkshop.net",
-    "DFUnity_Version": "1.0.0",
-    "ModDescription": "Fleshes out enemies with characteristic senses, stat/ability refinements, and additional combat logic.",
+    "ContactInfo": "dfworkshop.net or @proton.me",
+    "DFUnity_Version": "1.1.0",
+    "ModDescription": "Fleshes out enemies with characteristic senses, stat/ability refinements, and magic combat logic.",
     "GUID": "2e537e97-342f-41ca-9e39-96df405fe894",
     "Files": [
         "Assets/Game/Mods/Monster-University/Scripts/MonsterUniversityMod.cs",

@@ -2,7 +2,9 @@
 // Author:      DunnyOfPenwick
 // Origin Date: January 2024
 
+using System;
 using System.Collections.Generic;
+using UnityEngine;
 using DaggerfallConnect;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game;
@@ -22,23 +24,30 @@ namespace MonsterUniversity
         /// </summary>
         public static void Adjust(EnemyEntity entity)
         {
-            //Make sure entity has at least one weapon appropriate to their skills.
-            EnsureHasSkilledWeapon(entity);
-
-            //Check if equipped items should be replaced with something better from inventory.
-            for (int i = 0; i < entity.Items.Count; ++i)
+            try
             {
-                DaggerfallUnityItem item = entity.Items.GetItem(i);
+                //Make sure entity has at least one weapon appropriate to their skills.
+                EnsureHasSkilledWeapon(entity);
 
-                if (ShouldEquip(entity, item))
+                //Check if equipped items should be replaced with something better from inventory.
+                for (int i = 0; i < entity.Items.Count; ++i)
                 {
-                    EquipSlots slot = GetSlot(entity.ItemEquipTable, item);
-                    if (slot != EquipSlots.None)
+                    DaggerfallUnityItem item = entity.Items.GetItem(i);
+
+                    if (ShouldEquip(entity, item))
                     {
-                        entity.ItemEquipTable.UnequipItem(slot);
-                        entity.ItemEquipTable.EquipItem(item, true, false);
+                        EquipSlots slot = GetSlot(entity.ItemEquipTable, item);
+                        if (slot != EquipSlots.None)
+                        {
+                            entity.ItemEquipTable.UnequipItem(slot);
+                            entity.ItemEquipTable.EquipItem(item, true, false);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Monster-University:Equipment:{e.Message}");
             }
         }
 

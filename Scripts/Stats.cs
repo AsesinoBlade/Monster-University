@@ -13,8 +13,9 @@ namespace MonsterUniversity
 {
     public static class Stats
     {
-        static readonly Dictionary<MobileTypes, int[]> ClassStats = new Dictionary<MobileTypes, int[]>()
+        static readonly Dictionary<MobileTypes, int[]> classStats = new Dictionary<MobileTypes, int[]>()
         {
+            //class                  str  int wil agi end per spd lck
             { Acrobat, new int[8]    {40, 39, 45, 65, 47, 50, 63, 51} },
             { Archer, new int[8]     {55, 43, 45, 60, 50, 44, 53, 50} },
             { Assassin, new int[8]   {55, 45, 45, 60, 52, 45, 50, 48} },
@@ -67,7 +68,8 @@ namespace MonsterUniversity
             EnemyEntity enemyEntity = entity as EnemyEntity;
             MobileTypes classType = (MobileTypes)enemyEntity.MobileEnemy.ID;
 
-            if (!ClassStats.TryGetValue(classType, out int[] statValues))
+            //If not a standard human class, skip stat modification
+            if (!classStats.TryGetValue(classType, out int[] statValues))
                 return;
 
             float statValue = statValues[(int)stat];
@@ -102,7 +104,7 @@ namespace MonsterUniversity
             int value = entity.Stats.GetPermanentStatValue(stat);
 
             const float range = 20;
-            const int count = 7;
+            const int count = 5;
 
             float low = value - range;
             float high = value + range;

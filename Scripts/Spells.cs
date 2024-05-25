@@ -13,6 +13,7 @@ using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
 using DaggerfallConnect;
 using DaggerfallConnect.Save;
+using DaggerfallWorkshop.Game.Utility.ModSupport;
 
 namespace MonsterUniversity
 {
@@ -36,20 +37,13 @@ namespace MonsterUniversity
             {
                 RebuildSpellbook(entity);
             }
-            else if (entity.MobileEnemy.ID == (int)MobileTypes.Lich)
+            else if (entity.MobileEnemy.ID == (int)MobileTypes.Lich && Dice100.SuccessRoll(50))
             {
-                if (Dice100.SuccessRoll(70))
-                    entity.AddSpell(GetClassicSpell(4)); //Levitate
+                entity.AddSpell(GetClassicSpell(4)); //Levitate
             }
-            else if (entity.MobileEnemy.ID == (int)MobileTypes.AncientLich)
+            else if (entity.MobileEnemy.ID == (int)MobileTypes.AncientLich && Dice100.SuccessRoll(75))
             {
-                if (Dice100.SuccessRoll(85))
-                    entity.AddSpell(GetClassicSpell(4)); //Levitate
-            }
-            else if (entity.MobileEnemy.ID == (int)MobileTypes.VampireAncient)
-            {
-                if (Dice100.SuccessRoll(60))
-                    entity.AddSpell(GetClassicSpell(4)); //Levitate
+                entity.AddSpell(GetClassicSpell(4)); //Levitate
             }
         }
 
@@ -60,6 +54,9 @@ namespace MonsterUniversity
         /// </summary>
         static void RebuildSpellbook(EnemyEntity entity)
         {
+            //Check if 'Kab's Unleveled Spells' mod is installed
+            bool usingUnleveledSpells = (ModManager.Instance.GetModFromGUID("eb8c0317-b8ab-4679-bf61-1eaaff77a1f3") != null);
+
             //Clear the spellbook.
             while (entity.SpellbookCount() > 0)
                 entity.DeleteSpell(0);
@@ -71,28 +68,57 @@ namespace MonsterUniversity
                 if (skillValue < 25)
                     continue;
 
-                switch (skill)
+                if (!usingUnleveledSpells)
                 {
-                    case DFCareer.Skills.Alteration:
-                        AddAlterationSpells(entity, skillValue);
-                        break;
-                    case DFCareer.Skills.Destruction:
-                        AddDestructionSpells(entity, skillValue);
-                        break;
-                    case DFCareer.Skills.Illusion:
-                        AddIllusionSpells(entity, skillValue);
-                        break;
-                    case DFCareer.Skills.Mysticism:
-                        AddMysticismSpells(entity, skillValue);
-                        break;
-                    case DFCareer.Skills.Restoration:
-                        AddRestorationSpells(entity, skillValue);
-                        break;
-                    case DFCareer.Skills.Thaumaturgy:
-                        AddThaumaturgySpells(entity, skillValue);
-                        break;
-                    default:
-                        break;
+                    switch (skill)
+                    {
+                        case DFCareer.Skills.Alteration:
+                            AddAlterationSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Destruction:
+                            AddDestructionSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Illusion:
+                            AddIllusionSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Mysticism:
+                            AddMysticismSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Restoration:
+                            AddRestorationSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Thaumaturgy:
+                            AddThaumaturgySpells(entity, skillValue);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (skill)
+                    {
+                        case DFCareer.Skills.Alteration:
+                            AddUnleveledAlterationSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Destruction:
+                            AddUnleveledDestructionSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Illusion:
+                            AddIllusionSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Mysticism:
+                            AddMysticismSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Restoration:
+                            AddUnleveledRestorationSpells(entity, skillValue);
+                            break;
+                        case DFCareer.Skills.Thaumaturgy:
+                            AddUnleveledThaumaturgySpells(entity, skillValue);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -103,16 +129,34 @@ namespace MonsterUniversity
             if (skillValue > 35 && Dice100.SuccessRoll(70))
                 entity.AddSpell(GetClassicSpell(37)); //Slowfall
 
-            if (skillValue > 75 && Dice100.SuccessRoll(50))
+            if (skillValue > 74 && Dice100.SuccessRoll(50))
                 entity.AddSpell(GetClassicSpell(50)); //Paralysis
 
-            if (skillValue > 85 && entity.Skills.GetPermanentSkillValue(DFCareer.Skills.Destruction) > 85)
+            if (skillValue > 82 && entity.Skills.GetPermanentSkillValue(DFCareer.Skills.Destruction) > 82)
             {
                 if (Dice100.SuccessRoll(50))
                     entity.AddSpell(GetClassicSpell(34)); //Wizard Rend
             }
 
         }
+
+
+        static void AddUnleveledAlterationSpells(EnemyEntity entity, int skillValue)
+        {
+            if (skillValue > 33 && Dice100.SuccessRoll(70))
+                entity.AddSpell(GetClassicSpell(37)); //Slowfall
+
+            if (skillValue > 50 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(50)); //Paralysis
+
+            if (skillValue > 62 && entity.Skills.GetPermanentSkillValue(DFCareer.Skills.Destruction) > 62)
+            {
+                if (Dice100.SuccessRoll(50))
+                    entity.AddSpell(GetClassicSpell(34)); //Wizard Rend
+            }
+
+        }
+
 
 
         static void AddDestructionSpells(EnemyEntity entity, int skillValue)
@@ -150,6 +194,76 @@ namespace MonsterUniversity
         }
 
 
+        static void AddUnleveledDestructionSpells(EnemyEntity entity, int skillValue)
+        {
+
+            if (skillValue < 43 && Dice100.SuccessRoll(70))
+                entity.AddSpell(GetClassicSpell(102)); //Apprentice Fire
+            else if (skillValue < 43 && Dice100.SuccessRoll(70))
+                entity.AddSpell(GetClassicSpell(3)); //Minor Frostbite
+
+            if (skillValue > 34 && skillValue < 60 && Dice100.SuccessRoll(65))
+                entity.AddSpell(GetClassicSpell(8)); //Shock
+
+            if (skillValue > 35 && skillValue < 49 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(101)); //Stinking Cloud
+
+            if (skillValue > 45 && skillValue < 56 && Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(33)); //Wildfire
+
+            if (skillValue > 45 && skillValue < 75 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(53)); //Hand of Sleep
+
+            if (skillValue > 48 && skillValue < 73 && Dice100.SuccessRoll(65))
+                entity.AddSpell(GetClassicSpell(25)); //Lesser Fire Storm
+
+            if (skillValue > 49 && skillValue < 84 && Dice100.SuccessRoll(60))
+                    entity.AddSpell(GetClassicSpell(16)); //Ice Bolt
+
+            if (skillValue > 49 && skillValue < 80 && Dice100.SuccessRoll(60))
+                entity.AddSpell(GetClassicSpell(121)); //Minor Fireball
+
+            if (skillValue > 51 && skillValue < 86 && Dice100.SuccessRoll(65))
+                entity.AddSpell(GetClassicSpell(29)); //Toxic Cloud
+
+            if (skillValue > 57 && skillValue < 76 && Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(7)); //Wizard's Fire
+
+            if (skillValue > 58 && skillValue < 77 && Dice100.SuccessRoll(65))
+                entity.AddSpell(GetClassicSpell(31)); //Lightning
+
+            if (skillValue > 62 && Dice100.SuccessRoll(70))
+                entity.AddSpell(GetClassicSpell(118)); //Greater Frostbite
+
+            if (skillValue > 65 && skillValue < 88 && Dice100.SuccessRoll(60))
+                entity.AddSpell(GetClassicSpell(107)); //Greater Icebolt
+
+            if (skillValue > 71 && skillValue < 90 && Dice100.SuccessRoll(50))
+                entity.AddSpell(GetClassicSpell(52)); //Vampiric Touch
+
+            if (skillValue > 75 && Dice100.SuccessRoll(65))
+                entity.AddSpell(GetClassicSpell(14)); //Fireball
+
+            if (skillValue > 75 && Dice100.SuccessRoll(50))
+                entity.AddSpell(GetClassicSpell(104)); //Greater Flamestorm
+
+            if (skillValue > 85)
+            {
+                if (Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(113)); //Acid Cloud
+                if (Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(111)); //Greater Lightning
+                if (Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(20)); //Ice Storm
+                if (Dice100.SuccessRoll(65))
+                    entity.AddSpell(GetClassicSpell(110)); //Major Firestorm
+            }
+
+            if (skillValue == 100 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(32)); //Gods' Fire
+        }
+
+
         static void AddIllusionSpells(EnemyEntity entity, int skillValue)
         {
             if (skillValue > 30 && Dice100.SuccessRoll(50))
@@ -164,13 +278,13 @@ namespace MonsterUniversity
                     entity.AddSpell(mageLightSpell);
             }
 
-            if (skillValue > 45 && Dice100.SuccessRoll(50))
+            if (skillValue > 45 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(6)); //Invisibility-Normal
 
-            if (skillValue > 50 && Dice100.SuccessRoll(50))
+            if (skillValue > 50 && Dice100.SuccessRoll(40))
                 entity.AddSpell(shadowTrueSpell);
 
-            if (skillValue > 55 && Dice100.SuccessRoll(50))
+            if (skillValue > 55 && Dice100.SuccessRoll(40))
                 entity.AddSpell(chameleonTrueSpell);
 
             if (skillValue > 70 && Dice100.SuccessRoll(40))
@@ -180,25 +294,65 @@ namespace MonsterUniversity
 
         static void AddMysticismSpells(EnemyEntity entity, int skillValue)
         {
-            if (skillValue > 70 && Dice100.SuccessRoll(65))
+            if (skillValue > 60 && Dice100.SuccessRoll(40) && entity.MobileEnemy.ID != (int)MobileTypes.Healer)
                 entity.AddSpell(GetClassicSpell(23)); //Silence
         }
 
 
         static void AddRestorationSpells(EnemyEntity entity, int skillValue)
         {
-            if (skillValue > 30 && Dice100.SuccessRoll(skillValue + 20))
+            if (skillValue > 30 && Dice100.SuccessRoll(skillValue + 10))
                 entity.AddSpell(GetClassicSpell(10)); //Free Action
 
-            if (skillValue > 35 && Dice100.SuccessRoll(skillValue + 30))
-                entity.AddSpell(GetClassicSpell(97)); //Heal Self
-
-            if (skillValue > 50 && entity.MobileEnemy.ID == (int)MobileTypes.Healer)
+            if (skillValue > 47 && entity.MobileEnemy.ID == (int)MobileTypes.Healer)
                 entity.AddSpell(healAreaSpell);
+
+            if (skillValue > 70 && Dice100.SuccessRoll(skillValue - 20))
+                entity.AddSpell(GetClassicSpell(24)); //Troll's Blood - regeneration
+            else if (skillValue > 35 && Dice100.SuccessRoll(skillValue))
+                entity.AddSpell(GetClassicSpell(97)); //Balyna's Balm - heal self
 
             if (entity.Career.SpellAbsorption == DFCareer.SpellAbsorptionFlags.None)
             {
-                if (skillValue > 85 && Dice100.SuccessRoll(65))
+                if (skillValue > 81 && Dice100.SuccessRoll(40))
+                    entity.AddSpell(GetClassicSpell(47)); //Spell Absorption
+            }
+
+        }
+
+
+        static void AddUnleveledRestorationSpells(EnemyEntity entity, int skillValue)
+        {
+            if (skillValue > 35 && Dice100.SuccessRoll(skillValue))
+                entity.AddSpell(GetClassicSpell(10)); //Free Action
+
+            if (entity.MobileEnemy.ID == (int)MobileTypes.Healer)
+            {
+                if (skillValue < 55)
+                    entity.AddSpell(GetClassicSpell(97)); //Balyna's Balm
+                else if (skillValue < 80 && Dice100.SuccessRoll(50))
+                    entity.AddSpell(GetClassicSpell(24)); //Troll's Blood
+                else if (skillValue < 80)
+                    entity.AddSpell(GetClassicSpell(103)); //Balyna's Salve
+                else
+                    entity.AddSpell(GetClassicSpell(64)); //Heal
+
+                if (skillValue > 50 && Dice100.SuccessRoll(skillValue))
+                    entity.AddSpell(healAreaSpell);
+            }
+            else
+            {
+                if (skillValue > 35 && skillValue < 55 && Dice100.SuccessRoll(skillValue))
+                    entity.AddSpell(GetClassicSpell(97)); //Balyna's Balm
+                else if (skillValue > 54 && skillValue < 80 && Dice100.SuccessRoll(skillValue))
+                    entity.AddSpell(GetClassicSpell(103)); //Balyna's Salve
+                else if (skillValue > 79 && Dice100.SuccessRoll(40))
+                    entity.AddSpell(GetClassicSpell(64)); //Heal
+            }
+
+            if (entity.Career.SpellAbsorption == DFCareer.SpellAbsorptionFlags.None)
+            {
+                if (skillValue > 81 && Dice100.SuccessRoll(40))
                     entity.AddSpell(GetClassicSpell(47)); //Spell Absorption
             }
 
@@ -207,7 +361,7 @@ namespace MonsterUniversity
 
         static void AddThaumaturgySpells(EnemyEntity entity, int skillValue)
         {
-            if (skillValue > 45 && Dice100.SuccessRoll(70))
+            if (skillValue > 50 && Dice100.SuccessRoll(60))
                 entity.AddSpell(GetClassicSpell(4)); //Levitate
 
             if (skillValue > 87 && Dice100.SuccessRoll(60))
@@ -215,7 +369,24 @@ namespace MonsterUniversity
             else if (skillValue > 75 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(39)); //Spell Resistance
 
-            if (skillValue > 90 && Dice100.SuccessRoll(60))
+            if (skillValue > 93 && Dice100.SuccessRoll(50))
+                entity.AddSpell(GetClassicSpell(46)); //Spell Reflection
+        }
+
+
+        static void AddUnleveledThaumaturgySpells(EnemyEntity entity, int skillValue)
+        {
+            if (skillValue > 55 && Dice100.SuccessRoll(60))
+                entity.AddSpell(GetClassicSpell(4)); //Levitate
+
+            if (skillValue > 87 && Dice100.SuccessRoll(60))
+                entity.AddSpell(GetClassicSpell(22)); //Spell Shield
+            else if (skillValue > 75 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(39)); //Spell Resistance
+            else if (skillValue > 60 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(30)); //Shalidor's Mirror (brief spell reflection)
+
+            if (skillValue > 93 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(46)); //Spell Reflection
         }
 
@@ -224,8 +395,7 @@ namespace MonsterUniversity
         {
             if (GameManager.Instance.EntityEffectBroker.GetClassicSpellRecord(spellId, out SpellRecord.SpellRecordData spellData))
             {
-                EffectBundleSettings bundle;
-                GameManager.Instance.EntityEffectBroker.ClassicSpellRecordDataToEffectBundleSettings(spellData, BundleTypes.Spell, out bundle);
+                GameManager.Instance.EntityEffectBroker.ClassicSpellRecordDataToEffectBundleSettings(spellData, BundleTypes.Spell, out EffectBundleSettings bundle);
                 return bundle;
             }
             else
@@ -238,7 +408,7 @@ namespace MonsterUniversity
 
         static EffectBundleSettings chameleonTrueSpell = new EffectBundleSettings()
         {
-            Name = "True Chameleon",
+            Name = "Chameleon True",
             Version = EntityEffectBroker.CurrentSpellVersion,
             BundleType = BundleTypes.Spell,
             TargetType = TargetTypes.CasterOnly,
@@ -254,7 +424,7 @@ namespace MonsterUniversity
 
         static EffectBundleSettings shadowTrueSpell = new EffectBundleSettings()
         {
-            Name = "True Shadow",
+            Name = "Shadow True",
             Version = EntityEffectBroker.CurrentSpellVersion,
             BundleType = BundleTypes.Spell,
             TargetType = TargetTypes.CasterOnly,
@@ -270,7 +440,7 @@ namespace MonsterUniversity
 
         static EffectBundleSettings invisibilityTrueSpell = new EffectBundleSettings()
         {
-            Name = "True Invisibility",
+            Name = "Invisibility True",
             Version = EntityEffectBroker.CurrentSpellVersion,
             BundleType = BundleTypes.Spell,
             TargetType = TargetTypes.CasterOnly,
@@ -304,7 +474,7 @@ namespace MonsterUniversity
 
         static EffectBundleSettings mageLightSpell = new EffectBundleSettings()
         {
-            Name = "Mage Light",
+            Name = "Magical Light",
             Version = EntityEffectBroker.CurrentSpellVersion,
             BundleType = BundleTypes.Spell,
             TargetType = TargetTypes.CasterOnly,
@@ -329,6 +499,8 @@ namespace MonsterUniversity
             {
                 properties.Key = EffectKey;
                 properties.SupportMagnitude = true;
+                properties.SupportDuration = false;
+                properties.SupportChance = false;
                 properties.AllowedTargets = EntityEffectBroker.TargetFlags_Other;
                 properties.AllowedElements = EntityEffectBroker.ElementFlags_MagicOnly;
                 properties.AllowedCraftingStations = MagicCraftingStations.None;

@@ -100,7 +100,7 @@ namespace MonsterUniversity
                 //The chameleon spell isn't supposed to be as effective in dark areas.
                 //Add a small light to make it easier to see blending enemies in the dark.
                 chameleonAura = entityBehaviour.gameObject.AddComponent<Light>();
-                chameleonAura.color = new Color(0.8f, 0.8f, 1);
+                chameleonAura.color = new Color(0.5f, 0.5f, 0.7f);
                 chameleonAura.type = LightType.Point;
                 chameleonAura.range = 1.5f;
                 chameleonAura.hideFlags = HideFlags.HideInInspector; //This flag tells the First Person Lighting mod to ignore this light

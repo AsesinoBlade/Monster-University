@@ -2,6 +2,7 @@
 // Author:      DunnyOfPenwick
 // Origin Date: January 2024
 
+using System.Collections.Generic;
 using UnityEngine;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game.Entity;
@@ -12,7 +13,6 @@ using DaggerfallConnect;
 using DaggerfallWorkshop.Utility;
 using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
-using DaggerfallWorkshop.Game.Utility.ModSupport;
 
 namespace MonsterUniversity
 {
@@ -31,9 +31,148 @@ namespace MonsterUniversity
         float hearingRadius;
         float sightRadius;
 
-        bool isDaggerfallEnemyExpansionInstalled;
-
         static float lastMessageTime; //??????????????????????????????????????????
+
+        readonly Dictionary<int, float[]> enemySenseValues = new Dictionary<int, float[]>()
+        {
+            //mobile type                                      sightAcuity       stdFOV   waryFOV   hearRadius sightRadius
+            { (int)MobileTypes.Rat,                  new float[] { 0.80f,          270,     270,       24,        24 }},
+            { (int)MobileTypes.Imp,                  new float[] { 2.70f,          190,     220,       20,        30 }},
+            { (int)MobileTypes.Spriggan,             new float[] { 0.65f,          160,     160,       30,        25 }},
+            { (int)MobileTypes.GiantBat,             new float[] { float.MaxValue, 100,     100,       19,        16 }},
+            { (int)MobileTypes.GrizzlyBear,          new float[] { 1.10f,          190,     190,       26,        70 }},
+            { (int)MobileTypes.SabertoothTiger,      new float[] { 1.45f,          180,     180,       23,        75 }},
+            { (int)MobileTypes.Spider,               new float[] { 0.80f,          210,     210,       26,        24 }},
+            { (int)MobileTypes.Orc,                  new float[] { 1.10f,          190,     220,       17,        50 }},
+            { (int)MobileTypes.Centaur,              new float[] { 1.10f,          190,     220,       16,        65 }},
+            { (int)MobileTypes.Werewolf,             new float[] { 1.20f,          190,     220,       25,        75 }},
+            { (int)MobileTypes.Nymph,                new float[] { 1.00f,          190,     220,       16,        18 }},
+            { (int)MobileTypes.Slaughterfish,        new float[] { 0.60f,          220,     220,       34,        20 }},
+            { (int)MobileTypes.OrcSergeant,          new float[] { 1.10f,          190,     230,       17,        70 }},
+            { (int)MobileTypes.Harpy,                new float[] { 1.00f,          190,     220,       16,        50 }},
+            { (int)MobileTypes.Wereboar,             new float[] { 0.85f,          260,     300,       27,        45 }},
+            { (int)MobileTypes.SkeletalWarrior,      new float[] { float.MaxValue, 360,     360,       12,        12 }},
+            { (int)MobileTypes.Giant,                new float[] { 0.90f,          190,     220,       14,        75 }},
+            { (int)MobileTypes.Zombie,               new float[] { 0.65f,          160,     260,       12,        25 }},
+            { (int)MobileTypes.Ghost,                new float[] { float.MaxValue, 190,     190,       15,        28 }},
+            { (int)MobileTypes.Mummy,                new float[] { float.MaxValue, 360,     360,       12,        14 }},
+            { (int)MobileTypes.GiantScorpion,        new float[] { 0.80f,          220,     220,       27,        24 }},
+            { (int)MobileTypes.OrcShaman,            new float[] { 1.10f,          190,     220,       19,        45 }},
+            { (int)MobileTypes.Gargoyle,             new float[] { 1.80f,          190,     240,       25,        45 }},
+            { (int)MobileTypes.Wraith,               new float[] { float.MaxValue, 170,     170,       18,        33 }},
+            { (int)MobileTypes.OrcWarlord,           new float[] { 1.20f,          190,     230,       20,        70 }},
+            { (int)MobileTypes.FrostDaedra,          new float[] { 3.80f,          200,     210,       34,        75 }},
+            { (int)MobileTypes.FireDaedra,           new float[] { 4.10f,          200,     225,       32,        80 }},
+            { (int)MobileTypes.Daedroth,             new float[] { 2.80f,          220,     240,       26,        60 }},
+            { (int)MobileTypes.Vampire,              new float[] { 1.95f,          190,     220,       27,        65 }},
+            { (int)MobileTypes.DaedraSeducer,        new float[] { 4.80f,          190,     220,       40,        70 }},
+            { (int)MobileTypes.VampireAncient,       new float[] { 3.30f,          190,     220,       38,        80 }},
+            { (int)MobileTypes.DaedraLord,           new float[] { 6.20f,          190,     220,       49,        90 }},
+            { (int)MobileTypes.Lich,                 new float[] { float.MaxValue, 360,     360,       15,        19 }},
+            { (int)MobileTypes.AncientLich,          new float[] { float.MaxValue, 360,     360,       23,        26 }},
+            { (int)MobileTypes.Dragonling,           new float[] { 2.85f,          200,     240,       32,        80 }},
+            { (int)MobileTypes.FireAtronach,         new float[] { 0.85f,          180,     200,       14,        35 }},
+            { (int)MobileTypes.IronAtronach,         new float[] { 0.85f,          180,     200,       14,        35 }},
+            { (int)MobileTypes.FleshAtronach,        new float[] { 0.85f,          180,     200,       15,        35 }},
+            { (int)MobileTypes.IceAtronach,          new float[] { 0.85f,          180,     200,       14,        35 }},
+            //Horse_Invalid
+            { (int)MobileTypes.Dragonling_Alternate, new float[] { 3.15f,          200,     240,       36,        90 }},
+            { (int)MobileTypes.Dreugh,               new float[] { 0.75f,          190,     220,       28,        35 }},
+            { (int)MobileTypes.Lamia,                new float[] { 0.80f,          190,     220,       29,        30 }},
+
+            //----Enemy Expansion mod
+            //mobileID          sightAcuity      stdFOV   waryFOV   hearRadius sightRadius
+            { 256,   new float[] { 1.20f,          190,     240,       18,        35 }}, //Goblin
+            { 257,   new float[] { 1.70f,          190,     220,       20,        25 }}, //Homunuculus
+            { 258,   new float[] { 0.90f,          220,     260,       17,        40 }}, //Lizardman
+            { 259,   new float[] { 0.95f,          220,     260,       19,        60 }}, //Lizardman Warrior
+            { 260,   new float[] { float.MaxValue, 100,     120,       20,        12 }}, //Bat
+            { 261,   new float[] { 1.20f,          190,     220,       24,        70 }}, //Medusa
+            { 262,   new float[] { 1.40f,          190,     190,       29,        70 }}, //Wolf
+            { 263,   new float[] { 1.35f,          190,     210,       28,        70 }}, //Snow Wolf
+            { 264,   new float[] { 1.65f,          180,     220,       28,        80 }}, //HellHound
+            { 265,   new float[] { 1.65f,          190,     220,       25,        40 }}, //Grotesque
+            { 266,   new float[] { float.MaxValue, 360,     360,       11,        13 }}, //Skeletal Soldier
+            { 267,   new float[] { 1.20f,          190,     190,       25,        45 }}, //Dog
+            { 268,   new float[] { 1.00f,          190,     220,       16,        18 }}, //Nymph
+            { 269,   new float[] { 0.90f,          250,     280,       24,        50 }}, //Minotaur
+            { 270,   new float[] { 0.70f,          180,     180,       14,        25 }}, //Iron Golem
+            { 271,   new float[] { 1.30f,          240,     240,       27,        35 }}, //Blood Spider
+            { 272,   new float[] { 1.15f,          180,     220,       23,        70 }}, //Troll
+            { 273,   new float[] { float.MaxValue, 180,     180,       16,        25 }}, //Gloom Wraith
+            { 274,   new float[] { float.MaxValue, 140,     160,       13,        16 }}, //Faded Ghost
+            { 275,   new float[] { float.MaxValue, 190,     210,       16,        60 }}, //Vengeful King Lysandius
+            { 276,   new float[] { 2.25f,          180,     220,       30,        80 }}, //Fire Daemon
+            { 277,   new float[] { 1.50f,          190,     220,       22,        65 }}, //Ghoul
+            { 278,   new float[] { 0.85f,          260,     260,       26,        30 }}, //Boar
+            { 279,   new float[] { 0.90f,          180,     210,       25,        55 }}, //Land Dreugh
+            { 280,   new float[] { 1.35f,          190,     190,       27,        70 }}, //Mountain Lion
+            { 281,   new float[] { 0.70f,          300,     300,       13,        11 }}, //Mudcrab
+            { 282,   new float[] { 1.15f,          180,     210,       18,        65 }}, //Ogre
+            { 283,   new float[] { 2.80f,          360,     360,       12,        28 }}, //Wisp
+            { 284,   new float[] { 0.75f,          170,     170,       14,        23 }}, //Ice Golem
+            { 285,   new float[] { 1.50f,          190,     230,       21,        50 }}, //Dremora Churl
+            { 286,   new float[] { 0.65f,          170,     170,       17,        25 }}, //Stone Golem
+            { 287,   new float[] { 1.70f,          190,     230,       27,        70 }}, //Dire Ghoul
+            { 288,   new float[] { 1.55f,          190,     240,       23,        14 }}, //Scamp
+            { 289,   new float[] { 0.95f,          180,     180,       14,        15 }}, //Dwarven Sphere
+            { 290,   new float[] { 0.95f,          180,     180,       14,        35 }}, //Dwarven Steam
+        };
+
+
+        static readonly EquipSlots[] armorSlots =
+{
+            EquipSlots.ChestArmor, EquipSlots.Feet, EquipSlots.Gloves, EquipSlots.Head,
+            EquipSlots.LeftArm, EquipSlots.LegsArmor, EquipSlots.RightArm
+        };
+
+
+
+        /// <summary>
+        /// Calculate how much noise the target is making, based on armor worn, movement, stealth, etc.
+        /// </summary>
+        public static float GetNoise(DaggerfallEntityBehaviour target)
+        {
+            float loudness = 1f;
+
+            bool grounded = target.GetComponent<CharacterController>().isGrounded;
+
+            ItemEquipTable equipTable = target.Entity.ItemEquipTable;
+            foreach (EquipSlots slot in armorSlots)
+            {
+                DaggerfallUnityItem item = equipTable.GetItem(slot);
+                if (item == null || item.ItemGroup != ItemGroups.Armor)
+                    continue;
+
+                float armorLoudness = (item.NativeMaterialValue == (int)ArmorMaterialTypes.Leather) ? 0.3f : 0.9f;
+
+                if (slot == EquipSlots.Feet)
+                    armorLoudness *= grounded ? 4 : 1;
+                else if (slot == EquipSlots.LegsArmor)
+                    armorLoudness *= grounded ? 2 : 1;
+                else if (slot == EquipSlots.Head)
+                    armorLoudness *= 0.5f;
+
+                loudness += armorLoudness;
+            }
+
+            //Movement adjustment
+            float movement = 1 + target.GetComponent<CharacterController>().velocity.magnitude;
+            float noise = loudness * movement / 2;
+
+            //Stealth adjustment
+            float stealth = target.Entity.Skills.GetLiveSkillValue(DFCareer.Skills.Stealth);
+            noise *= (120.0f - stealth) / 100.0f;
+
+            if (stealth == 100)
+                noise /= 2; //mastery bonus
+
+            //Always some effective noise equivalent, i.e. air currents, body heat, odor, etc.
+            noise = Mathf.Clamp(noise, 1, 20);
+
+            return noise;
+        }
+
 
         void Start()
         {
@@ -50,309 +189,54 @@ namespace MonsterUniversity
 
 
             originalCanDetectOtherwiseCallback = enemySenses.CanDetectOtherwiseHandler;
-            enemySenses.CanDetectOtherwiseHandler = CanSeePlayerLight;
-
-
-            isDaggerfallEnemyExpansionInstalled = ModManager.Instance.GetMod("Daggerfall Enemy Expansion") != null;
-
+            enemySenses.CanDetectOtherwiseHandler = CanDetectOtherwise;
 
             SetSenseValues();
-
         }
 
 
-        void FixedUpdate()
+        void Update()
         {
+            if (GameManager.IsGamePaused)
+                return;
+
             isWary = enemySenses.DetectedTarget && !enemySenses.TargetInSight;
 
             enemySenses.FieldOfView = isWary ? fieldOfViewWary : fieldOfViewStandard;
+
+            //Periodically check if player's light source gets them noticed.
+            if (Time.frameCount % 40 == 0)
+            {
+                if (enemySenses.Target == GameManager.Instance.PlayerEntityBehaviour)
+                {
+                    if (CanSeePlayerLight())
+                    {
+                        enemySenses.DetectedTarget = true;
+                        enemySenses.LastKnownTargetPos = GameManager.Instance.PlayerEntityBehaviour.transform.position;
+                        enemySenses.PredictedTargetPos = enemySenses.LastKnownTargetPos;
+                    }
+                }
+            }
         }
 
 
         void SetSenseValues()
         {
+            //Default to typical human class values
+            sightAcuity = 1f;
             sightRadius = enemySenses.SightRadius;
             hearingRadius = 16;
+            fieldOfViewStandard = 180;
+            fieldOfViewWary = 220;
 
-            switch (enemyEntity.MobileEnemy.ID)
+            //Check if the entity exists in the senses table.
+            if (enemySenseValues.TryGetValue(enemyEntity.MobileEnemy.ID, out float[] values))
             {
-                case (int)MobileTypes.Rat:
-                    sightAcuity = 0.80f;
-                    fieldOfViewStandard = 260;
-                    fieldOfViewWary = 260;
-                    hearingRadius = 24;
-                    sightRadius = 15;
-                    break;
-                case (int)MobileTypes.Imp:
-                    sightAcuity = 2.5f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 18;
-                    break;
-                case (int)MobileTypes.Spriggan:
-                    sightAcuity = 0.8f;
-                    fieldOfViewStandard = 160;
-                    fieldOfViewWary = 190;
-                    hearingRadius = 30;
-                    sightRadius = 35;
-                    break;
-                case (int)MobileTypes.GiantBat:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 100;
-                    fieldOfViewWary = 100;
-                    hearingRadius = 19;
-                    sightRadius = 14;
-                    break;
-                case (int)MobileTypes.GrizzlyBear:
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 190;
-                    hearingRadius = 24;
-                    break;
-                case (int)MobileTypes.SabertoothTiger:
-                    sightAcuity = 1.25f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 190;
-                    hearingRadius = 25;
-                    break;
-                case (int)MobileTypes.Spider:
-                    sightAcuity = 1.2f;
-                    fieldOfViewStandard = 220;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 20;
-                    sightRadius = 14;
-                    break;
-                case (int)MobileTypes.Orc:
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 17;
-                    break;
-                case (int)MobileTypes.Centaur:
-                    sightAcuity = 1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 16;
-                    break;
-                case (int)MobileTypes.Werewolf:
-                    sightAcuity = 1.2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 22;
-                    break;
-                case (int)MobileTypes.Nymph:
-                    sightAcuity = 1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 16;
-                    break;
-                case (int)MobileTypes.Slaughterfish:
-                    sightAcuity = 0.7f;
-                    fieldOfViewStandard = 220;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 29;
-                    sightRadius = 15;
-                    break;
-                case (int)MobileTypes.OrcSergeant:
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 17;
-                    break;
-                case (int)MobileTypes.Harpy:
-                    sightAcuity = 1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 18;
-                    break;
-                case (int)MobileTypes.Wereboar:
-                    sightAcuity = 0.8f;
-                    fieldOfViewStandard = 220;
-                    fieldOfViewWary = 250;
-                    hearingRadius = 26;
-                    sightRadius = 24;
-                    break;
-                case (int)MobileTypes.SkeletalWarrior:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 11;
-                    sightRadius = 11;
-                    break;
-                case (int)MobileTypes.Giant:
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 14;
-                    break;
-                case (int)MobileTypes.Zombie:
-                    sightAcuity = 0.7f;
-                    fieldOfViewStandard = 160;
-                    fieldOfViewWary = 160;
-                    hearingRadius = 12;
-                    sightRadius = 25;
-                    break;
-                case (int)MobileTypes.Ghost:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 190;
-                    hearingRadius = 16;
-                    break;
-                case (int)MobileTypes.Mummy:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 12;
-                    sightRadius = 15;
-                    break;
-                case (int)MobileTypes.GiantScorpion:
-                    sightAcuity = 0.85f;
-                    fieldOfViewStandard = 250;
-                    fieldOfViewWary = 250;
-                    hearingRadius = 30;
-                    sightRadius = 10;
-                    break;
-                case (int)MobileTypes.OrcShaman:
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 17;
-                    break;
-                case (int)MobileTypes.Gargoyle:
-                    sightAcuity = 1.35f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 19;
-                    break;
-                case (int)MobileTypes.Wraith:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 170;
-                    fieldOfViewWary = 170;
-                    hearingRadius = 16;
-                    break;
-                case (int)MobileTypes.OrcWarlord:
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 17;
-                    break;
-                case (int)MobileTypes.FrostDaedra:
-                    sightAcuity = 3f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 26;
-                    break;
-                case (int)MobileTypes.FireDaedra:
-                    sightAcuity = 3f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 26;
-                    break;
-                case (int)MobileTypes.Daedroth:
-                    sightAcuity = 3f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 26;
-                    break;
-                case (int)MobileTypes.Vampire:
-                    sightAcuity = 1.55f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 22;
-                    break;
-                case (int)MobileTypes.DaedraSeducer:
-                    sightAcuity = 3.5f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 30;
-                    break;
-                case (int)MobileTypes.VampireAncient:
-                    sightAcuity = 2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 22;
-                    break;
-                case (int)MobileTypes.DaedraLord:
-                    sightAcuity = 4f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 32;
-                    break;
-                case (int)MobileTypes.Lich:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 15;
-                    sightRadius = 18;
-                    break;
-                case (int)MobileTypes.AncientLich:
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 15;
-                    sightRadius = 25;
-                    break;
-                case (int)MobileTypes.Dragonling:
-                    sightAcuity = 1.7f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 30;
-                    break;
-                case (int)MobileTypes.Dragonling_Alternate:
-                    sightAcuity = 2.0f;
-                    fieldOfViewStandard = 200;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 32;
-                    break;
-                case (int)MobileTypes.FireAtronach:
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 14;
-                    break;
-                case (int)MobileTypes.IronAtronach:
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 14;
-                    break;
-                case (int)MobileTypes.FleshAtronach:
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 15;
-                    break;
-                case (int)MobileTypes.IceAtronach:
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 14;
-                    break;
-                case (int)MobileTypes.Dreugh:
-                    sightAcuity = 0.8f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 29;
-                    sightRadius = 15;
-                    break;
-                case (int)MobileTypes.Lamia:
-                    sightAcuity = 0.8f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 29;
-                    sightRadius = 15;
-                    break;
-                default:
-                    sightAcuity = 1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 16;
-                    sightRadius = enemySenses.SightRadius;
-
-                    if (isDaggerfallEnemyExpansionInstalled)
-                        SetExpandedEnemySenseValues();
-
-                    break;
+                sightAcuity = values[0];
+                fieldOfViewStandard = values[1];
+                fieldOfViewWary = values[2];
+                hearingRadius = values[3];
+                sightRadius = values[4];
             }
 
             enemySenses.SightRadius = sightRadius;
@@ -360,218 +244,6 @@ namespace MonsterUniversity
             enemySenses.FieldOfView = fieldOfViewStandard;
         }
 
-
-        /// <summary>
-        /// Check for other entity types if Daggerfall Enemy Expansion is installed.
-        /// </summary>
-        void SetExpandedEnemySenseValues()
-        {
-            switch (enemyEntity.MobileEnemy.ID)
-            {
-
-                case 256: //Goblin - Daggerfall Enemy Expansion
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 18;
-                    break;
-                case 257: //Homunuculus - Daggerfall Enemy Expansion
-                    sightAcuity = 2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 18;
-                    break;
-                case 258: //Lizardman - Daggerfall Enemy Expansion
-                    sightAcuity = 0.85f;
-                    fieldOfViewStandard = 220;
-                    fieldOfViewWary = 260;
-                    hearingRadius = 15;
-                    break;
-                case 259: //Lizardman Warrior - Daggerfall Enemy Expansion
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 220;
-                    fieldOfViewWary = 260;
-                    hearingRadius = 17;
-                    break;
-                case 260: //Bat - Daggerfall Enemy Expansion
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 100;
-                    fieldOfViewWary = 100;
-                    hearingRadius = 16;
-                    sightRadius = 12;
-                    break;
-                case 261: //Medusa - Daggerfall Enemy Expansion
-                    sightAcuity = 1.2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 20;
-                    break;
-                case 262: //Wolf - Daggerfall Enemy Expansion
-                    sightAcuity = 1.3f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 30;
-                    break;
-                case 263: //Snow Wolf - Daggerfall Enemy Expansion
-                    sightAcuity = 1.3f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 30;
-                    break;
-                case 264: //HellHound - Daggerfall Enemy Expansion
-                    sightAcuity = 1.45f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 28;
-                    break;
-                case 265: //Grotesque - Daggerfall Enemy Expansion
-                    sightAcuity = 1.25f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 23;
-                    break;
-                case 266: //Skeletal Soldier - Daggerfall Enemy Expansion
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 11;
-                    sightRadius = 11;
-                    break;
-                case 267: //Dog - Daggerfall Enemy Expansion
-                    sightAcuity = 1.2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 28;
-                    break;
-                case 268: //Nymph - Daggerfall Enemy Expansion
-                    sightAcuity = 1f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 16;
-                    break;
-                case 269: //Minotaur - Daggerfall Enemy Expansion
-                    sightAcuity = 1.15f;
-                    fieldOfViewStandard = 210;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 19;
-                    break;
-                case 270: //Iron Golem - Daggerfall Enemy Expansion
-                    sightAcuity = 0.75f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 13;
-                    sightRadius = 20;
-                    break;
-                case 271: //Blood Spider - Daggerfall Enemy Expansion
-                    sightAcuity = 1.6f;
-                    fieldOfViewStandard = 300;
-                    fieldOfViewWary = 300;
-                    hearingRadius = 13;
-                    sightRadius = 19;
-                    break;
-                case 272: //Troll - Daggerfall Enemy Expansion
-                    sightAcuity = 1.15f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 24;
-                    break;
-                case 273: //Gloom Wraith - Daggerfall Enemy Expansion
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 180;
-                    hearingRadius = 18;
-                    break;
-                case 274: //Faded Ghost - Daggerfall Enemy Expansion
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 160;
-                    fieldOfViewWary = 160;
-                    hearingRadius = 15;
-                    sightRadius = 25;
-                    break;
-                case 275: //Vengeful King Lysandius - Daggerfall Enemy Expansion
-                    sightAcuity = float.MaxValue;
-                    fieldOfViewStandard = 210;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 25;
-                    break;
-                case 276: //Fire Daemon - Daggerfall Enemy Expansion
-                    sightAcuity = 2.5f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 29;
-                    break;
-                case 277: //Ghoul - Daggerfall Enemy Expansion
-                    sightAcuity = 1.25f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 20;
-                    break;
-                case 278: //Boar - Daggerfall Enemy Expansion
-                    sightAcuity = 0.8f;
-                    fieldOfViewStandard = 240;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 28;
-                    break;
-                case 279:  //Land Dreugh - Daggerfall Enemy Expansion
-                    sightAcuity = 0.85f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 210;
-                    hearingRadius = 27;
-                    break;
-                case 280:  //Mountain Lion - Daggerfall Enemy Expansion
-                    sightAcuity = 1.35f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 190;
-                    hearingRadius = 28;
-                    break;
-                case 281:  //Mudcrab - Daggerfall Enemy Expansion
-                    sightAcuity = 0.9f;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 14;
-                    sightRadius = 13;
-                    break;
-                case 282:  //Ogre - Daggerfall Enemy Expansion
-                    sightAcuity = 1.1f;
-                    fieldOfViewStandard = 180;
-                    fieldOfViewWary = 220;
-                    hearingRadius = 15;
-                    break;
-                case 283:  //Wisp - Daggerfall Enemy Expansion
-                    sightAcuity = 2.5f;
-                    fieldOfViewStandard = 360;
-                    fieldOfViewWary = 360;
-                    hearingRadius = 5;
-                    sightRadius = 26;
-                    break;
-                case 284: //Ice Golem - Daggerfall Enemy Expansion
-                    sightAcuity = 0.75f;
-                    fieldOfViewStandard = 170;
-                    fieldOfViewWary = 170;
-                    hearingRadius = 14;
-                    sightRadius = 25;
-                    break;
-                case 285: //Dremora Churl - Daggerfall Enemy Expansion
-                    sightAcuity = 2f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 230;
-                    hearingRadius = 25;
-                    break;
-                case 286: //Stone Golem - Daggerfall Enemy Expansion
-                    sightAcuity = 0.75f;
-                    fieldOfViewStandard = 170;
-                    fieldOfViewWary = 170;
-                    hearingRadius = 14;
-                    sightRadius = 20;
-                    break;
-                case 287: //Dire Ghoul - Daggerfall Enemy Expansion
-                    sightAcuity = 1.5f;
-                    fieldOfViewStandard = 190;
-                    fieldOfViewWary = 240;
-                    hearingRadius = 22;
-                    break;
-            }
-        }
 
 
 
@@ -601,22 +273,25 @@ namespace MonsterUniversity
             if (!originalCanSeeTargetCallback(target))
                 return false;
 
+            DaggerfallEntityBehaviour playerBehaviour = GameManager.Instance.PlayerEntityBehaviour;
+
+
+            //Holy candles can block the vision of undead enemies if the target is within its radius.
+            if (enemyEntity.Team == MobileTeams.Undead)
+            {
+                PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
+                if (playerEntity.LightSource != null && playerEntity.LightSource.TemplateIndex == (int)ReligiousItems.Holy_candle)
+                    if (Vector3.Distance(target.transform.position, playerBehaviour.transform.position) < 5)
+                        return false;
+            }
+
             //Certain enemies, like skeletal warriors, automatically see everything in their sight range.
             if (sightAcuity == float.MaxValue)
                 return true;
 
-            //Chance of automatically spotting, if close enough and in field-of-view.
-            if (distance < 2f && Dice100.SuccessRoll(30))
+            //Automatically spotted if close enough and in field-of-view.
+            if (distance < 2.1f)
                 return true;
-
-            bool khajiitSuit = false;
-            DaggerfallUnityItem legs = target.Entity.ItemEquipTable.GetItem(EquipSlots.LegsClothes);
-            if (legs != null && (legs.TemplateIndex == (int)MensClothing.Khajiit_suit || legs.TemplateIndex == (int)WomensClothing.Khajiit_suit))
-            {
-                ItemEquipTable equipTable = target.Entity.ItemEquipTable;
-                if (equipTable.GetItem(EquipSlots.ChestArmor) == null && equipTable.GetItem(EquipSlots.ChestClothes) == null)
-                    khajiitSuit = true;
-            }
 
             //Moving across field of vision? How much?
             Vector3 movement = target.GetComponent<CharacterController>().velocity;
@@ -625,7 +300,7 @@ namespace MonsterUniversity
 
             float warinessModifier = isWary ? 1.5f : 1;
 
-            float threshold = Mathf.Log10(distance) / 20 / warinessModifier / sightAcuity;
+            float threshold = Mathf.Log10(distance) / 35 / warinessModifier / sightAcuity;
 
             //A target with high stealth is somewhat less visible.
             float stealthSkill = target.Entity.Skills.GetLiveSkillValue(DFCareer.Skills.Stealth);
@@ -633,25 +308,27 @@ namespace MonsterUniversity
 
             float crouchingModifier = 1;
             if (target.EntityType == EntityTypes.Player && GameManager.Instance.PlayerMotor.IsCrouching)
-                crouchingModifier = 0.85f;
+                crouchingModifier = 0.8f;
 
             Color tColor;
             if (target.Entity.IsAShade)
-                tColor = new Color(0, 0, 0, 0.2f);
-            else if (khajiitSuit)
-                tColor = new Color(0.25f, 0.25f, 0.25f, 1);
+                tColor = new Color(0, 0, 0, 0.08f);
+            else if (target.EntityType == EntityTypes.Player)
+                tColor = MonsterUniversityMod.Instance.PaperDollAverageColor;
             else
-                tColor = Color.gray;
+                tColor = new Color(0.3f, 0.3f, 0.3f, 1f);
+
+            Color tLighting = MonsterUniversityMod.Instance.GetLightingOnEntity(target);
 
             if (target.Entity.IsInvisible)
-                tColor.a = 0.01f;
+                tColor.a = (1 - tLighting.grayscale) / 25; //invisibility works better in lit environments
             else if (target.Entity.IsBlending)
-                tColor.a = 0.03f;
+                tColor.a = (1 - tLighting.grayscale) / 10; //chameleon works better in lit environments
             else if (!target.Entity.IsAShade)
-                tColor *= MonsterUniversityMod.Instance.GetLightingOnEntity(target);
+                tColor *= tLighting;
 
             //The player is considered well-lit while casting spells.
-            if (target == GameManager.Instance.PlayerEntityBehaviour && GameManager.Instance.PlayerSpellCasting.IsPlayingAnim)
+            if (target == playerBehaviour && GameManager.Instance.PlayerSpellCasting.IsPlayingAnim)
                 tColor = Color.gray;
 
             //If target is readily visible, return true.
@@ -673,7 +350,7 @@ namespace MonsterUniversity
             }
 
 
-            //Basic vision check failed, now compare target to the background.
+            //===========Basic vision check failed, now compare target to the background.
             Vector3 background = GetTargetBackground(target);
 
             Color bgLighting;
@@ -689,7 +366,7 @@ namespace MonsterUniversity
                 bgLighting = MonsterUniversityMod.Instance.GetLightingAtLocation(background);
             }
 
-            Color bgColor = bgLighting * 0.5f;
+            Color bgColor = bgLighting * 0.2f; //assuming background color is dark gray
 
             //Calculate the effective color of the target...
             float tr = tColor.r * tColor.a + bgColor.r * (1 - tColor.a);
@@ -703,18 +380,18 @@ namespace MonsterUniversity
 
             float contrast = redDiff + greenDiff + blueDiff;
 
-            visibility = contrast * stealthModifier * movementModifier;
+            visibility = contrast * stealthModifier * movementModifier / 4f;
 
             //????????????????????
-            if (false && Time.time > lastMessageTime + 3)
+            if (Time.time > lastMessageTime + 2)
             {
                 if (target == GameManager.Instance.PlayerEntityBehaviour)
                 {
-                    lastMessageTime = Time.time;
                     if (visibility > threshold)
+                    {
+                        lastMessageTime = Time.time;
                         DaggerfallUI.AddHUDText("silhouette seen (" + visibility + " > " + threshold + ")", 2);
-                    else
-                        DaggerfallUI.AddHUDText("silhouette NOT seen (" + visibility + " > " + threshold + ")", 2);
+                    }
                 }
             }
 
@@ -733,14 +410,13 @@ namespace MonsterUniversity
             // If something is between enemy and target then return false, to minimize
             // enemies walking against walls.
             Ray ray = new Ray(transform.position, enemySenses.DirectionToTarget);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit))
+            if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 if (GameObjectHelper.IsStaticGeometry(hit.transform.gameObject))
                     return false;
             }
 
-            float noise = GetNoise();
+            float noise = GetNoise(enemySenses.Target);
 
             if (enemyEntity.Career.AcuteHearing)
                 noise *= enemyEntity.ImprovedAcuteHearing ? 1.5f : 1.3f;
@@ -752,16 +428,16 @@ namespace MonsterUniversity
             {
                 if (enemySenses.Target == GameManager.Instance.PlayerEntityBehaviour)
                 {
-                    lastMessageTime = Time.time;
-                    if (result > 6f)
+                    if (result > 7f)
+                    {
+                        lastMessageTime = Time.time;
                         DaggerfallUI.AddHUDText("heard (" + result + " > 6)", 2);
-                    else
-                        DaggerfallUI.AddHUDText("NOT heard (" + result + " <= 6)", 2);
+                    }
                 }
             }
 
 
-            return result > 6f;
+            return result > 7f;
         }
 
 
@@ -786,60 +462,26 @@ namespace MonsterUniversity
 
             //Looking past target toward background.
             Ray ray = new Ray(targetTorsoPos, eyeDirectionToTarget);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, float.MaxValue, targetMask))
+            if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, targetMask))
                 return hit.point - (eyeDirectionToTarget * 0.01f);
             else
                 return Vector3.zero; //This might happen if outside looking at sky.
         }
 
 
-        static readonly EquipSlots[] armorSlots =
-{
-            EquipSlots.ChestArmor, EquipSlots.Feet, EquipSlots.Gloves, EquipSlots.Head,
-            EquipSlots.LeftArm, EquipSlots.LegsArmor, EquipSlots.RightArm
-        };
-
         /// <summary>
-        /// Calculate how much noise the target is making, based on armor worn, movement, stealth, etc.
+        ///  Checks if this entity detects the target via non-standard means.
         /// </summary>
-        float GetNoise()
+        bool CanDetectOtherwise(DaggerfallEntityBehaviour target)
         {
-            float loudness = 1f;
+            //In case another mod is also employing logic, give them a chance to detect.
+            if (originalCanDetectOtherwiseCallback(target))
+                return true;
 
-            bool grounded = enemySenses.Target.GetComponent<CharacterController>().isGrounded;
+            if (target != GameManager.Instance.PlayerEntityBehaviour)
+                return false;
 
-            ItemEquipTable equipTable = enemySenses.Target.Entity.ItemEquipTable;
-            foreach (EquipSlots slot in armorSlots)
-            {
-                DaggerfallUnityItem item = equipTable.GetItem(slot);
-                if (item == null || item.ItemGroup != ItemGroups.Armor)
-                    continue;
-
-                float armorLoudness = (item.NativeMaterialValue == (int)ArmorMaterialTypes.Leather) ? 0.3f : 0.9f;
-
-                if (slot == EquipSlots.Feet)
-                    armorLoudness *= grounded ? 4 : 1;
-                else if (slot == EquipSlots.LegsArmor)
-                    armorLoudness *= grounded ? 2 : 1;
-                else if (slot == EquipSlots.Head)
-                    armorLoudness *= 0.5f;
-
-                loudness += armorLoudness;
-            }
-
-            //Movement adjustment
-            float movement = 1 + enemySenses.Target.GetComponent<CharacterController>().velocity.magnitude;
-            float noise = loudness * movement / 2;
-
-            //Stealth adjustment
-            float stealth = enemySenses.Target.Entity.Skills.GetLiveSkillValue(DFCareer.Skills.Stealth);
-            noise *= (120.0f - stealth) / 100.0f;
-
-            //Always some effective noise equivalent, i.e. air currents, body heat, odor, etc.
-            noise = Mathf.Clamp(noise, 1, 20);
-
-            return noise;
+            return CanSeePlayerLight();
         }
 
 
@@ -847,16 +489,12 @@ namespace MonsterUniversity
         ///  Checks if this entity notices the light carried/used by the player, if any.
         ///  The player should be automatically detected if using a light and the entity is within the light radius.
         /// </summary>
-        bool CanSeePlayerLight(DaggerfallEntityBehaviour target)
+        bool CanSeePlayerLight()
         {
-            //In case another mod is also employing logic, give them a chance to detect.
-            if (originalCanDetectOtherwiseCallback(target) == true)
-                return true;
-
             PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
             DaggerfallEntityBehaviour player = GameManager.Instance.PlayerEntityBehaviour;
 
-            if (target != player)
+            if (Vector3.Distance(enemySenses.transform.position, player.transform.position) > 20)
                 return false;
 
             float lightRange = 10;
@@ -890,13 +528,12 @@ namespace MonsterUniversity
             Vector3 direction = (player.transform.position - transform.position).normalized;
 
             Ray ray = new Ray(transform.position, direction);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, Mathf.Min(sightRadius, lightRange)))
+            if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Min(sightRadius, lightRange)))
                 return hit.collider == GameManager.Instance.PlayerController;
             else
                 return false;
-
         }
+
 
 
     } //class EnemySensesEnhancement
