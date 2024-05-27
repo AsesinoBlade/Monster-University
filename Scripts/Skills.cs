@@ -15,10 +15,11 @@ namespace MonsterUniversity
     {
 
         /// <summary>
-        /// Sets enemy skill values based on their class primary, major, minor, and misc skills.
+        /// Sets enemy human skill values based on their class primary, major, minor, and misc skills.
         /// </summary>
         public static void Adjust(EnemyEntity entity, bool isCustom)
         {
+            //Human enemies from the Daggerfall Enemy Expansion mod don't have skills set, so we skip them.
             if (entity.EntityType == EntityTypes.EnemyClass && !isCustom)
             {
                 //Human class enemy skills should follow their class template
@@ -29,6 +30,7 @@ namespace MonsterUniversity
             }
             else
             {
+                //For monsters, set non-magic skills slightly lower than vanilla.
                 for (int i = 0; i < (int)DFCareer.Skills.Count; ++i)
                 {
                     //Keeping magic skills at their default values.

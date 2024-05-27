@@ -2,11 +2,11 @@
 // Author:      DunnyOfPenwick
 // Origin Date: January 2024
 
+using System.Collections.Generic;
+using UnityEngine;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Entity;
-using System.Collections.Generic;
-using UnityEngine;
 
 
 namespace MonsterUniversity
@@ -47,7 +47,16 @@ namespace MonsterUniversity
         }
 
 
+        /// <summary>
+        /// Determines is path from origin to target is unobstructed by terrain.
+        /// </summary>
+        public static bool HasPath(Vector3 origin, Vector3 target)
+        {
+            Vector3 direction = (target - origin).normalized;
+            float distance = Vector3.Distance(origin, target);
 
+            return !Physics.Raycast(origin, direction, out RaycastHit hitInfo, distance, 1);
+        }
 
 
     } //class Utility

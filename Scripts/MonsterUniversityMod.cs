@@ -157,8 +157,8 @@ namespace MonsterUniversity
 
 
             Debug.Log("Finished Start(): Monster-University");
-
         }
+
 
         void Update()
         {
@@ -166,7 +166,7 @@ namespace MonsterUniversity
                 return;
 
             //Periodically sample the PC paper doll.
-            if (Time.frameCount % 200 == 0)
+            if (Time.frameCount % 199 == 0)
                 PaperDollAverageColor = GetPaperDollAverageColor();
         }
 
@@ -279,9 +279,7 @@ namespace MonsterUniversity
             AdjustCareer(entity);
 
             //Add incumbent effect to handle damage from sunlight/holy places etc.
-            if (!SaveLoadManager.Instance.LoadInProgress)
-                AddPassiveSpecials(behaviour);
-
+            AddPassiveSpecials(behaviour);
 
             //Add new components for motor and senses enhancement.
             enemy.AddComponent<EnemySensesEnhancement>();
@@ -299,18 +297,18 @@ namespace MonsterUniversity
         /// </summary>
         void AdjustCareer(EnemyEntity entity)
         {
-            //Most Undead and bloodless enemies shouldn't be poisoned, diseased, or paralyzed.
-            if (entity.MobileEnemy.Team == MobileTeams.Undead || entity.MobileEnemy.BloodIndex == 2)
+            if (entity.MobileEnemy.BloodIndex == 2) //bloodless enemies
             {
                 entity.Career.Disease = DFCareer.Tolerance.Immune;
+                entity.Career.Paralysis = DFCareer.Tolerance.Immune;
                 entity.Career.Poison = DFCareer.Tolerance.Immune;
-
-                if (entity.MobileEnemy.BloodIndex == 2)
-                    entity.Career.Paralysis = DFCareer.Tolerance.Immune;
             }
 
             if (entity.MobileEnemy.Team == MobileTeams.Undead)
+            {
+                entity.Career.Disease = DFCareer.Tolerance.Immune;
                 entity.Career.DamageFromHolyPlaces = true;
+            }
         }
 
 
@@ -344,7 +342,7 @@ namespace MonsterUniversity
         {
             const int G = 85;   // Mob Array Gap from 42 .. 128 = 85
 
-            //Sorcerer graphic same as in Roleplay and Realism mod
+            //Using Sorcerer graphic same as in Roleplay and Realism mod
             int sorcererIndex = (int)MobileTypes.Sorcerer - G;
             EnemyBasics.Enemies[sorcererIndex].MaleTexture = 476;
             EnemyBasics.Enemies[sorcererIndex].FemaleTexture = 475;

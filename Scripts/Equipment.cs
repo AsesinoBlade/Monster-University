@@ -26,7 +26,7 @@ namespace MonsterUniversity
         {
             try
             {
-                //Make sure entity has at least one weapon appropriate to their skills.
+                //Make sure our guy has at least one weapon appropriate to their skills.
                 EnsureHasSkilledWeapon(entity);
 
                 //Check if equipped items should be replaced with something better from inventory.
@@ -63,7 +63,6 @@ namespace MonsterUniversity
         /// Make sure entity has an appropriate weapon in inventory for their skillset.
         /// If not, create one.
         /// </summary>
-        /// <param name="entity"></param>
         static void EnsureHasSkilledWeapon(EnemyEntity entity)
         {
             //Determine best melee skill.

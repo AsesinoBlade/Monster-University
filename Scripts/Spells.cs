@@ -15,9 +15,9 @@ using DaggerfallConnect;
 using DaggerfallConnect.Save;
 using DaggerfallWorkshop.Game.Utility.ModSupport;
 
+
 namespace MonsterUniversity
 {
-
 
     public static class Spells
     {
@@ -129,6 +129,9 @@ namespace MonsterUniversity
             if (skillValue > 35 && Dice100.SuccessRoll(70))
                 entity.AddSpell(GetClassicSpell(37)); //Slowfall
 
+            if (skillValue > 70 && Dice100.SuccessRoll(50))
+                entity.AddSpell(GetClassicSpell(17)); //Shield
+
             if (skillValue > 74 && Dice100.SuccessRoll(50))
                 entity.AddSpell(GetClassicSpell(50)); //Paralysis
 
@@ -148,6 +151,9 @@ namespace MonsterUniversity
 
             if (skillValue > 50 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(50)); //Paralysis
+
+            if (skillValue > 57 && Dice100.SuccessRoll(50))
+                entity.AddSpell(GetClassicSpell(17)); //Shield
 
             if (skillValue > 62 && entity.Skills.GetPermanentSkillValue(DFCareer.Skills.Destruction) > 62)
             {
@@ -209,7 +215,7 @@ namespace MonsterUniversity
                 entity.AddSpell(GetClassicSpell(101)); //Stinking Cloud
 
             if (skillValue > 45 && skillValue < 56 && Dice100.SuccessRoll(65))
-                    entity.AddSpell(GetClassicSpell(33)); //Wildfire
+                entity.AddSpell(GetClassicSpell(33)); //Wildfire
 
             if (skillValue > 45 && skillValue < 75 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(53)); //Hand of Sleep
@@ -218,7 +224,7 @@ namespace MonsterUniversity
                 entity.AddSpell(GetClassicSpell(25)); //Lesser Fire Storm
 
             if (skillValue > 49 && skillValue < 84 && Dice100.SuccessRoll(60))
-                    entity.AddSpell(GetClassicSpell(16)); //Ice Bolt
+                entity.AddSpell(GetClassicSpell(16)); //Ice Bolt
 
             if (skillValue > 49 && skillValue < 80 && Dice100.SuccessRoll(60))
                 entity.AddSpell(GetClassicSpell(121)); //Minor Fireball
@@ -227,7 +233,7 @@ namespace MonsterUniversity
                 entity.AddSpell(GetClassicSpell(29)); //Toxic Cloud
 
             if (skillValue > 57 && skillValue < 76 && Dice100.SuccessRoll(65))
-                    entity.AddSpell(GetClassicSpell(7)); //Wizard's Fire
+                entity.AddSpell(GetClassicSpell(7)); //Wizard's Fire
 
             if (skillValue > 58 && skillValue < 77 && Dice100.SuccessRoll(65))
                 entity.AddSpell(GetClassicSpell(31)); //Lightning
@@ -269,7 +275,7 @@ namespace MonsterUniversity
             if (skillValue > 30 && Dice100.SuccessRoll(50))
                 entity.AddSpell(GetClassicSpell(45)); //Shadow-Normal
 
-            if (skillValue > 35 && Dice100.SuccessRoll(50))
+            if (skillValue > 30 && Dice100.SuccessRoll(50))
                 entity.AddSpell(GetClassicSpell(44)); //Chameleon-Normal
 
             if (skillValue > 40 && entity.MobileEnemy.Team == MobileTeams.KnightsAndMages)
@@ -309,7 +315,7 @@ namespace MonsterUniversity
 
             if (skillValue > 70 && Dice100.SuccessRoll(skillValue - 20))
                 entity.AddSpell(GetClassicSpell(24)); //Troll's Blood - regeneration
-            else if (skillValue > 35 && Dice100.SuccessRoll(skillValue))
+            else if (skillValue > 35 && Dice100.SuccessRoll(skillValue - 20))
                 entity.AddSpell(GetClassicSpell(97)); //Balyna's Balm - heal self
 
             if (entity.Career.SpellAbsorption == DFCareer.SpellAbsorptionFlags.None)
@@ -337,16 +343,16 @@ namespace MonsterUniversity
                 else
                     entity.AddSpell(GetClassicSpell(64)); //Heal
 
-                if (skillValue > 50 && Dice100.SuccessRoll(skillValue))
+                if (skillValue > 47 && Dice100.SuccessRoll(skillValue))
                     entity.AddSpell(healAreaSpell);
             }
             else
             {
                 if (skillValue > 35 && skillValue < 55 && Dice100.SuccessRoll(skillValue))
                     entity.AddSpell(GetClassicSpell(97)); //Balyna's Balm
-                else if (skillValue > 54 && skillValue < 80 && Dice100.SuccessRoll(skillValue))
+                else if (skillValue > 54 && skillValue < 80 && Dice100.SuccessRoll(skillValue - 10))
                     entity.AddSpell(GetClassicSpell(103)); //Balyna's Salve
-                else if (skillValue > 79 && Dice100.SuccessRoll(40))
+                else if (skillValue > 79 && Dice100.SuccessRoll(skillValue - 35))
                     entity.AddSpell(GetClassicSpell(64)); //Heal
             }
 
@@ -364,10 +370,11 @@ namespace MonsterUniversity
             if (skillValue > 50 && Dice100.SuccessRoll(60))
                 entity.AddSpell(GetClassicSpell(4)); //Levitate
 
+            if (skillValue > 75 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(39)); //Spell Resistance
+
             if (skillValue > 87 && Dice100.SuccessRoll(60))
                 entity.AddSpell(GetClassicSpell(22)); //Spell Shield
-            else if (skillValue > 75 && Dice100.SuccessRoll(40))
-                entity.AddSpell(GetClassicSpell(39)); //Spell Resistance
 
             if (skillValue > 93 && Dice100.SuccessRoll(50))
                 entity.AddSpell(GetClassicSpell(46)); //Spell Reflection
@@ -376,18 +383,20 @@ namespace MonsterUniversity
 
         static void AddUnleveledThaumaturgySpells(EnemyEntity entity, int skillValue)
         {
-            if (skillValue > 55 && Dice100.SuccessRoll(60))
+            if (skillValue > 50 && Dice100.SuccessRoll(60))
                 entity.AddSpell(GetClassicSpell(4)); //Levitate
 
-            if (skillValue > 87 && Dice100.SuccessRoll(60))
-                entity.AddSpell(GetClassicSpell(22)); //Spell Shield
-            else if (skillValue > 75 && Dice100.SuccessRoll(40))
+            if (skillValue > 70 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(39)); //Spell Resistance
+
+            if (skillValue > 82 && Dice100.SuccessRoll(60))
+                entity.AddSpell(GetClassicSpell(22)); //Spell Shield
+
+            if (skillValue > 90 && Dice100.SuccessRoll(40))
+                entity.AddSpell(GetClassicSpell(46)); //Spell Reflection
             else if (skillValue > 60 && Dice100.SuccessRoll(40))
                 entity.AddSpell(GetClassicSpell(30)); //Shalidor's Mirror (brief spell reflection)
 
-            if (skillValue > 93 && Dice100.SuccessRoll(40))
-                entity.AddSpell(GetClassicSpell(46)); //Spell Reflection
         }
 
 
@@ -505,7 +514,7 @@ namespace MonsterUniversity
                 properties.AllowedElements = EntityEffectBroker.ElementFlags_MagicOnly;
                 properties.AllowedCraftingStations = MagicCraftingStations.None;
                 properties.MagicSkill = DFCareer.MagicSkills.Restoration;
-                properties.MagnitudeCosts = MakeEffectCosts(20, 28);
+                properties.MagnitudeCosts = MakeEffectCosts(30, 42);
                 properties.DisableReflectiveEnumeration = true;
             }
 
@@ -600,6 +609,9 @@ namespace MonsterUniversity
                 myLight = go.AddComponent<Light>();
                 myLight.type = LightType.Point;
                 Color color = Color.white;
+                DaggerfallEnemy enemy = caster.GetComponent<DaggerfallEnemy>();
+                if (enemy)
+                    Random.InitState((int)(enemy.LoadID % 1000)); //to maintain consistent light color per enemy.
                 color.r = Random.Range(0.3f, 1f);
                 color.g = Random.Range(0.3f, 1f);
                 color.b = Random.Range(0.3f, 1f);

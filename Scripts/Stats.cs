@@ -73,7 +73,7 @@ namespace MonsterUniversity
                 return;
 
             float statValue = statValues[(int)stat];
-            float levelBoost = Mathf.Clamp((statValue - 36) / 10, 0.5f, 2f);
+            float levelBoost = Mathf.Clamp((statValue - 36f) / 10f, 0.5f, 2f);
             levelBoost *= entity.Level;
             statValue += levelBoost;
 

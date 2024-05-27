@@ -4,7 +4,7 @@
     "ModAuthor": "DunnyOfPenwick",
     "ContactInfo": "dfworkshop.net or @proton.me",
     "DFUnity_Version": "1.1.0",
-    "ModDescription": "Fleshes out enemies with characteristic senses, stat/ability refinements, and magic combat logic.",
+    "ModDescription": "Adds advanced vision logic.  Fleshes out enemies with characteristic senses, stat/skill refinements, and magic combat logic.",
     "GUID": "2e537e97-342f-41ca-9e39-96df405fe894",
     "Files": [
         "Assets/Game/Mods/Monster-University/Scripts/MonsterUniversityMod.cs",
@@ -15,7 +15,8 @@
         "Assets/Game/Mods/Monster-University/Scripts/EntityConcealmentBehaviourMU.cs",
         "Assets/Game/Mods/Monster-University/Scripts/Utility.cs",
         "Assets/Game/Mods/Monster-University/Scripts/EnemyMotorEnhancement.cs",
-        "Assets/Game/Mods/Monster-University/Scripts/EnemySensesEnhancement.cs"
+        "Assets/Game/Mods/Monster-University/Scripts/EnemySensesEnhancement.cs",
+        "Assets/Game/Mods/Monster-University/Monster-University.dfmod.json"
     ],
     "Dependencies": [
         {

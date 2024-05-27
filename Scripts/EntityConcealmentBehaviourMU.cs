@@ -95,7 +95,7 @@ namespace MonsterUniversity
             {
                 chameleonAura.enabled = enable;
             }
-            else if (enable == true)
+            else if (enable)
             {
                 //The chameleon spell isn't supposed to be as effective in dark areas.
                 //Add a small light to make it easier to see blending enemies in the dark.

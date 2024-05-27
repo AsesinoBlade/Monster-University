@@ -7,7 +7,6 @@ using UnityEngine;
 using DaggerfallWorkshop;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game;
-using DaggerfallWorkshop.Game.Utility;
 using DaggerfallWorkshop.Game.Items;
 using DaggerfallConnect;
 using DaggerfallWorkshop.Utility;
@@ -18,12 +17,11 @@ namespace MonsterUniversity
 {
     public class EnemySensesEnhancement : MonoBehaviour
     {
-        EnemyEntity enemyEntity;
-        EnemySenses enemySenses;
+        EnemyEntity entity;
+        EnemySenses senses;
         bool isWary;
 
         EnemySenses.CanSeeTargetCallback originalCanSeeTargetCallback;
-        EnemySenses.CanDetectOtherwiseCallback originalCanDetectOtherwiseCallback;
 
         float sightAcuity;
         float fieldOfViewStandard;
@@ -31,32 +29,30 @@ namespace MonsterUniversity
         float hearingRadius;
         float sightRadius;
 
-        static float lastMessageTime; //??????????????????????????????????????????
-
         readonly Dictionary<int, float[]> enemySenseValues = new Dictionary<int, float[]>()
         {
             //mobile type                                      sightAcuity       stdFOV   waryFOV   hearRadius sightRadius
-            { (int)MobileTypes.Rat,                  new float[] { 0.80f,          270,     270,       24,        24 }},
+            { (int)MobileTypes.Rat,                  new float[] { 0.80f,          270,     270,       24,        20 }},
             { (int)MobileTypes.Imp,                  new float[] { 2.70f,          190,     220,       20,        30 }},
             { (int)MobileTypes.Spriggan,             new float[] { 0.65f,          160,     160,       30,        25 }},
             { (int)MobileTypes.GiantBat,             new float[] { float.MaxValue, 100,     100,       19,        16 }},
-            { (int)MobileTypes.GrizzlyBear,          new float[] { 1.10f,          190,     190,       26,        70 }},
+            { (int)MobileTypes.GrizzlyBear,          new float[] { 1.10f,          190,     190,       26,        50 }},
             { (int)MobileTypes.SabertoothTiger,      new float[] { 1.45f,          180,     180,       23,        75 }},
             { (int)MobileTypes.Spider,               new float[] { 0.80f,          210,     210,       26,        24 }},
             { (int)MobileTypes.Orc,                  new float[] { 1.10f,          190,     220,       17,        50 }},
-            { (int)MobileTypes.Centaur,              new float[] { 1.10f,          190,     220,       16,        65 }},
-            { (int)MobileTypes.Werewolf,             new float[] { 1.20f,          190,     220,       25,        75 }},
+            { (int)MobileTypes.Centaur,              new float[] { 1.10f,          190,     220,       16,        60 }},
+            { (int)MobileTypes.Werewolf,             new float[] { 1.20f,          190,     220,       25,        80 }},
             { (int)MobileTypes.Nymph,                new float[] { 1.00f,          190,     220,       16,        18 }},
-            { (int)MobileTypes.Slaughterfish,        new float[] { 0.60f,          220,     220,       34,        20 }},
+            { (int)MobileTypes.Slaughterfish,        new float[] { 0.60f,          220,     220,       34,        40 }},
             { (int)MobileTypes.OrcSergeant,          new float[] { 1.10f,          190,     230,       17,        70 }},
             { (int)MobileTypes.Harpy,                new float[] { 1.00f,          190,     220,       16,        50 }},
-            { (int)MobileTypes.Wereboar,             new float[] { 0.85f,          260,     300,       27,        45 }},
+            { (int)MobileTypes.Wereboar,             new float[] { 0.85f,          260,     300,       27,        60 }},
             { (int)MobileTypes.SkeletalWarrior,      new float[] { float.MaxValue, 360,     360,       12,        12 }},
             { (int)MobileTypes.Giant,                new float[] { 0.90f,          190,     220,       14,        75 }},
             { (int)MobileTypes.Zombie,               new float[] { 0.65f,          160,     260,       12,        25 }},
             { (int)MobileTypes.Ghost,                new float[] { float.MaxValue, 190,     190,       15,        28 }},
             { (int)MobileTypes.Mummy,                new float[] { float.MaxValue, 360,     360,       12,        14 }},
-            { (int)MobileTypes.GiantScorpion,        new float[] { 0.80f,          220,     220,       27,        24 }},
+            { (int)MobileTypes.GiantScorpion,        new float[] { 0.80f,          220,     220,       27,        35 }},
             { (int)MobileTypes.OrcShaman,            new float[] { 1.10f,          190,     220,       19,        45 }},
             { (int)MobileTypes.Gargoyle,             new float[] { 1.80f,          190,     240,       25,        45 }},
             { (int)MobileTypes.Wraith,               new float[] { float.MaxValue, 170,     170,       18,        33 }},
@@ -64,7 +60,7 @@ namespace MonsterUniversity
             { (int)MobileTypes.FrostDaedra,          new float[] { 3.80f,          200,     210,       34,        75 }},
             { (int)MobileTypes.FireDaedra,           new float[] { 4.10f,          200,     225,       32,        80 }},
             { (int)MobileTypes.Daedroth,             new float[] { 2.80f,          220,     240,       26,        60 }},
-            { (int)MobileTypes.Vampire,              new float[] { 1.95f,          190,     220,       27,        65 }},
+            { (int)MobileTypes.Vampire,              new float[] { 1.95f,          190,     220,       27,        70 }},
             { (int)MobileTypes.DaedraSeducer,        new float[] { 4.80f,          190,     220,       40,        70 }},
             { (int)MobileTypes.VampireAncient,       new float[] { 3.30f,          190,     220,       38,        80 }},
             { (int)MobileTypes.DaedraLord,           new float[] { 6.20f,          190,     220,       49,        90 }},
@@ -77,15 +73,15 @@ namespace MonsterUniversity
             { (int)MobileTypes.IceAtronach,          new float[] { 0.85f,          180,     200,       14,        35 }},
             //Horse_Invalid
             { (int)MobileTypes.Dragonling_Alternate, new float[] { 3.15f,          200,     240,       36,        90 }},
-            { (int)MobileTypes.Dreugh,               new float[] { 0.75f,          190,     220,       28,        35 }},
-            { (int)MobileTypes.Lamia,                new float[] { 0.80f,          190,     220,       29,        30 }},
+            { (int)MobileTypes.Dreugh,               new float[] { 0.75f,          190,     220,       28,        45 }},
+            { (int)MobileTypes.Lamia,                new float[] { 0.80f,          190,     220,       29,        40 }},
 
             //----Enemy Expansion mod
             //mobileID          sightAcuity      stdFOV   waryFOV   hearRadius sightRadius
-            { 256,   new float[] { 1.20f,          190,     240,       18,        35 }}, //Goblin
+            { 256,   new float[] { 1.20f,          190,     240,       18,        30 }}, //Goblin
             { 257,   new float[] { 1.70f,          190,     220,       20,        25 }}, //Homunuculus
             { 258,   new float[] { 0.90f,          220,     260,       17,        40 }}, //Lizardman
-            { 259,   new float[] { 0.95f,          220,     260,       19,        60 }}, //Lizardman Warrior
+            { 259,   new float[] { 0.95f,          220,     260,       19,        55 }}, //Lizardman Warrior
             { 260,   new float[] { float.MaxValue, 100,     120,       20,        12 }}, //Bat
             { 261,   new float[] { 1.20f,          190,     220,       24,        70 }}, //Medusa
             { 262,   new float[] { 1.40f,          190,     190,       29,        70 }}, //Wolf
@@ -104,10 +100,10 @@ namespace MonsterUniversity
             { 275,   new float[] { float.MaxValue, 190,     210,       16,        60 }}, //Vengeful King Lysandius
             { 276,   new float[] { 2.25f,          180,     220,       30,        80 }}, //Fire Daemon
             { 277,   new float[] { 1.50f,          190,     220,       22,        65 }}, //Ghoul
-            { 278,   new float[] { 0.85f,          260,     260,       26,        30 }}, //Boar
+            { 278,   new float[] { 0.85f,          260,     260,       26,        25 }}, //Boar
             { 279,   new float[] { 0.90f,          180,     210,       25,        55 }}, //Land Dreugh
             { 280,   new float[] { 1.35f,          190,     190,       27,        70 }}, //Mountain Lion
-            { 281,   new float[] { 0.70f,          300,     300,       13,        11 }}, //Mudcrab
+            { 281,   new float[] { 0.50f,          300,     300,       13,        11 }}, //Mudcrab
             { 282,   new float[] { 1.15f,          180,     210,       18,        65 }}, //Ogre
             { 283,   new float[] { 2.80f,          360,     360,       12,        28 }}, //Wisp
             { 284,   new float[] { 0.75f,          170,     170,       14,        23 }}, //Ice Golem
@@ -177,19 +173,15 @@ namespace MonsterUniversity
         void Start()
         {
             DaggerfallEntityBehaviour behavior = GetComponent<DaggerfallEntityBehaviour>();
-            enemyEntity = behavior.Entity as EnemyEntity;
-            enemySenses = GetComponent<EnemySenses>();
+            entity = behavior.Entity as EnemyEntity;
+            senses = GetComponent<EnemySenses>();
 
-            enemySenses.BlockedByIllusionEffectHandler = BlockedByIllusionEffect;
+            senses.BlockedByIllusionEffectHandler = BlockedByIllusionEffect;
 
-            originalCanSeeTargetCallback = enemySenses.CanSeeTargetHandler;
-            enemySenses.CanSeeTargetHandler = CanSeeTarget;
+            originalCanSeeTargetCallback = senses.CanSeeTargetHandler;
+            senses.CanSeeTargetHandler = CanSeeTarget;
 
-            enemySenses.CanHearTargetHandler = CanHearTarget;
-
-
-            originalCanDetectOtherwiseCallback = enemySenses.CanDetectOtherwiseHandler;
-            enemySenses.CanDetectOtherwiseHandler = CanDetectOtherwise;
+            senses.CanHearTargetHandler = CanHearTarget;
 
             SetSenseValues();
         }
@@ -200,23 +192,25 @@ namespace MonsterUniversity
             if (GameManager.IsGamePaused)
                 return;
 
-            isWary = enemySenses.DetectedTarget && !enemySenses.TargetInSight;
+            isWary = senses.DetectedTarget && !senses.TargetInSight;
 
-            enemySenses.FieldOfView = isWary ? fieldOfViewWary : fieldOfViewStandard;
+            senses.FieldOfView = isWary ? fieldOfViewWary : fieldOfViewStandard;
 
             //Periodically check if player's light source gets them noticed.
-            if (Time.frameCount % 40 == 0)
+            if (Time.frameCount % 87 == 0)
             {
-                if (enemySenses.Target == GameManager.Instance.PlayerEntityBehaviour)
+                if (senses.Target == GameManager.Instance.PlayerEntityBehaviour)
                 {
                     if (CanSeePlayerLight())
                     {
-                        enemySenses.DetectedTarget = true;
-                        enemySenses.LastKnownTargetPos = GameManager.Instance.PlayerEntityBehaviour.transform.position;
-                        enemySenses.PredictedTargetPos = enemySenses.LastKnownTargetPos;
+                        senses.DetectedTarget = true;
+                        senses.OldLastKnownTargetPos = GameManager.Instance.PlayerEntityBehaviour.transform.position;
+                        senses.LastKnownTargetPos = senses.OldLastKnownTargetPos;
+                        senses.PredictedTargetPos = senses.LastKnownTargetPos;
                     }
                 }
             }
+
         }
 
 
@@ -224,13 +218,13 @@ namespace MonsterUniversity
         {
             //Default to typical human class values
             sightAcuity = 1f;
-            sightRadius = enemySenses.SightRadius;
+            sightRadius = senses.SightRadius;
             hearingRadius = 16;
-            fieldOfViewStandard = 180;
+            fieldOfViewStandard = 190;
             fieldOfViewWary = 220;
 
             //Check if the entity exists in the senses table.
-            if (enemySenseValues.TryGetValue(enemyEntity.MobileEnemy.ID, out float[] values))
+            if (enemySenseValues.TryGetValue(entity.MobileEnemy.ID, out float[] values))
             {
                 sightAcuity = values[0];
                 fieldOfViewStandard = values[1];
@@ -239,9 +233,9 @@ namespace MonsterUniversity
                 sightRadius = values[4];
             }
 
-            enemySenses.SightRadius = sightRadius;
-            enemySenses.HearingRadius = hearingRadius;
-            enemySenses.FieldOfView = fieldOfViewStandard;
+            senses.SightRadius = sightRadius;
+            senses.HearingRadius = hearingRadius;
+            senses.FieldOfView = fieldOfViewStandard;
         }
 
 
@@ -277,11 +271,11 @@ namespace MonsterUniversity
 
 
             //Holy candles can block the vision of undead enemies if the target is within its radius.
-            if (enemyEntity.Team == MobileTeams.Undead)
+            if (entity.Team == MobileTeams.Undead)
             {
                 PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
                 if (playerEntity.LightSource != null && playerEntity.LightSource.TemplateIndex == (int)ReligiousItems.Holy_candle)
-                    if (Vector3.Distance(target.transform.position, playerBehaviour.transform.position) < 5)
+                    if (Vector3.Distance(target.transform.position, playerBehaviour.transform.position) < 4.5f)
                         return false;
             }
 
@@ -312,7 +306,7 @@ namespace MonsterUniversity
 
             Color tColor;
             if (target.Entity.IsAShade)
-                tColor = new Color(0, 0, 0, 0.08f);
+                tColor = new Color(0, 0, 0, 0.12f);
             else if (target.EntityType == EntityTypes.Player)
                 tColor = MonsterUniversityMod.Instance.PaperDollAverageColor;
             else
@@ -334,23 +328,11 @@ namespace MonsterUniversity
             //If target is readily visible, return true.
             float visibility = tColor.grayscale * tColor.a * stealthModifier * movementModifier * crouchingModifier;
 
-            //????????????????????????????????????????????????????????
-            if (Time.time > lastMessageTime + 3)
-            {
-                if (visibility > threshold && target == GameManager.Instance.PlayerEntityBehaviour)
-                {
-                    lastMessageTime = Time.time;
-                    DaggerfallUI.AddHUDText("seen (" + visibility + " > " + threshold + ")", 2);
-                }
-            }
-
             if (visibility > threshold)
-            {
                 return true;
-            }
 
 
-            //===========Basic vision check failed, now compare target to the background.
+            //===========Basic vision check failed, now check if silhouette can be seen.
             Vector3 background = GetTargetBackground(target);
 
             Color bgLighting;
@@ -382,19 +364,6 @@ namespace MonsterUniversity
 
             visibility = contrast * stealthModifier * movementModifier / 4f;
 
-            //????????????????????
-            if (Time.time > lastMessageTime + 2)
-            {
-                if (target == GameManager.Instance.PlayerEntityBehaviour)
-                {
-                    if (visibility > threshold)
-                    {
-                        lastMessageTime = Time.time;
-                        DaggerfallUI.AddHUDText("silhouette seen (" + visibility + " > " + threshold + ")", 2);
-                    }
-                }
-            }
-
             return visibility > threshold;
         }
 
@@ -404,38 +373,24 @@ namespace MonsterUniversity
         /// </summary>
         bool CanHearTarget()
         {
-            if (enemySenses.DistanceToTarget > hearingRadius)
+            if (senses.DistanceToTarget > hearingRadius)
                 return false;
 
             // If something is between enemy and target then return false, to minimize
             // enemies walking against walls.
-            Ray ray = new Ray(transform.position, enemySenses.DirectionToTarget);
+            Ray ray = new Ray(transform.position, senses.DirectionToTarget);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
                 if (GameObjectHelper.IsStaticGeometry(hit.transform.gameObject))
                     return false;
             }
 
-            float noise = GetNoise(enemySenses.Target);
+            float noise = GetNoise(senses.Target);
 
-            if (enemyEntity.Career.AcuteHearing)
-                noise *= enemyEntity.ImprovedAcuteHearing ? 1.5f : 1.3f;
+            if (entity.Career.AcuteHearing)
+                noise *= entity.ImprovedAcuteHearing ? 1.5f : 1.3f;
 
-            float result = Mathf.Sqrt(hearingRadius - enemySenses.DistanceToTarget + 1) * noise;
-
-            //???????????????????????????????????????????????????
-            if (Time.time > lastMessageTime + 3)
-            {
-                if (enemySenses.Target == GameManager.Instance.PlayerEntityBehaviour)
-                {
-                    if (result > 7f)
-                    {
-                        lastMessageTime = Time.time;
-                        DaggerfallUI.AddHUDText("heard (" + result + " > 6)", 2);
-                    }
-                }
-            }
-
+            float result = Mathf.Sqrt(hearingRadius - senses.DistanceToTarget + 1) * noise;
 
             return result > 7f;
         }
@@ -465,23 +420,7 @@ namespace MonsterUniversity
             if (Physics.Raycast(ray, out RaycastHit hit, float.MaxValue, targetMask))
                 return hit.point - (eyeDirectionToTarget * 0.01f);
             else
-                return Vector3.zero; //This might happen if outside looking at sky.
-        }
-
-
-        /// <summary>
-        ///  Checks if this entity detects the target via non-standard means.
-        /// </summary>
-        bool CanDetectOtherwise(DaggerfallEntityBehaviour target)
-        {
-            //In case another mod is also employing logic, give them a chance to detect.
-            if (originalCanDetectOtherwiseCallback(target))
-                return true;
-
-            if (target != GameManager.Instance.PlayerEntityBehaviour)
-                return false;
-
-            return CanSeePlayerLight();
+                return Vector3.zero; //This might happen if outside looking at sky for example.
         }
 
 
@@ -494,7 +433,7 @@ namespace MonsterUniversity
             PlayerEntity playerEntity = GameManager.Instance.PlayerEntity;
             DaggerfallEntityBehaviour player = GameManager.Instance.PlayerEntityBehaviour;
 
-            if (Vector3.Distance(enemySenses.transform.position, player.transform.position) > 20)
+            if (Vector3.Distance(senses.transform.position, player.transform.position) > 20)
                 return false;
 
             float lightRange = 10;

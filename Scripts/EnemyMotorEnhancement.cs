@@ -10,7 +10,7 @@ using DaggerfallWorkshop.Game;
 using DaggerfallWorkshop.Game.Entity;
 using DaggerfallWorkshop.Game.MagicAndEffects;
 using DaggerfallWorkshop.Game.MagicAndEffects.MagicEffects;
-
+using DaggerfallWorkshop.Game.Utility;
 
 namespace MonsterUniversity
 {
@@ -38,11 +38,10 @@ namespace MonsterUniversity
         EffectBundleSettings freeActionSpell = new EffectBundleSettings();
         EffectBundleSettings lightSpell = new EffectBundleSettings();
 
-        float lastHealCheck;
+        float nextHealCheck;
 
 
 
-        // Start is called before the first frame update
         void Start()
         {
             motor = GetComponent<EnemyMotor>();
@@ -71,19 +70,44 @@ namespace MonsterUniversity
             if (GameManager.IsGamePaused)
                 return;
 
-            if (Time.frameCount % 50 == 0)
+            if (Time.frameCount % 47 == 0)
             {
                 //Check if falling and cast slowfall/levitate if necessary.
                 TryCastFallingSpell();
 
-                //This likely won't get triggered as enemy can't act while paralyzed.
-                //This might be modified later.
-                if (TryCastFreeAction())
-                    return;
+                //Should enemies be able to cast free action?  Maybe I'll add a mod setting later...
+                TryCastFreeAction();
             }
+
+            //If enemy detected, warn allies in the area.
+            if (Time.frameCount % 99 == 0 && senses.Target != null && senses.DetectedTarget)
+            {
+                List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(transform.position, 18f);
+                foreach (DaggerfallEntityBehaviour behaviour in entities)
+                {
+                    if (behaviour.Entity.Team == entity.Team)
+                    {
+                        EnemySenses allySenses = behaviour.GetComponent<EnemySenses>();
+                        if (allySenses.Target == null || allySenses.DetectedTarget == false)
+                        {
+                            if (Utility.HasPath(transform.position, allySenses.transform.position))
+                            {
+                                allySenses.Target = senses.Target;
+                                allySenses.DetectedTarget = true;
+                                allySenses.LastKnownTargetPos = senses.LastKnownTargetPos;
+                            }
+                        }
+                    }
+                }
+            }
+
+
         }
 
 
+        /// <summary>
+        /// Our version of TakeAction, replacing the one in EnemyMotor.
+        /// </summary>
         void TakeAction()
         {
             //Check if enemy might surrender.
@@ -92,7 +116,6 @@ namespace MonsterUniversity
 
             //Call the original (default) TakeAction method
             originalTakeActionCallback();
-
 
             if (TryCastCombatPrepSpell())
                 return;
@@ -109,12 +132,12 @@ namespace MonsterUniversity
 
 
 
+        /// <summary>
+        /// Our version of CanCastRangedSpell, replacing the one in EnemyMotor.
+        /// </summary>
         bool CanCastRangedSpell()
         {
             if (entity.CurrentMagicka <= 0)
-                return false;
-
-            if (senses.Target == null)
                 return false;
 
             EffectBundleSettings spell = new EffectBundleSettings();
@@ -122,54 +145,49 @@ namespace MonsterUniversity
             //Check if an area effect spell is desired.
             if (rangedAreaAttackSpells.Count > 0)
             {
-                int allyCount = 0;
-                int enemyCount = 0;
+                EffectBundleSettings choice = rangedAreaAttackSpells[Random.Range(0, rangedAreaAttackSpells.Count)];
+
+                int tally = 0;
                 List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(senses.Target.transform.position, 4.3f);
+
                 foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
                 {
-                    if (targetBehaviour == behaviour)
-                        continue;
-                    else if (entity.Team == MobileTeams.PlayerAlly && targetBehaviour.EntityType == EntityTypes.Player)
-                        ++allyCount;
-                    else if (targetBehaviour.Entity.Team == entity.Team)
-                        ++allyCount;
-                    else if (entity.Team == MobileTeams.PlayerAlly)
-                    {
-                        EnemyMotor targetMotor = targetBehaviour.GetComponent<EnemyMotor>();
-                        if (targetMotor && targetMotor.IsHostile) //pacified enemies don't count as enemies to player allies
-                            ++enemyCount;
-                    }
-                    else
-                        ++enemyCount;
+                    tally += AnalyzeTargetEffect(targetBehaviour, choice);
                 }
 
-                if ((enemyCount > 1 || rangedAttackSpells.Count == 0) && allyCount == 0)
-                    spell = rangedAreaAttackSpells[Random.Range(0, rangedAreaAttackSpells.Count)];
+                if (tally >= 2 || (tally >= 1 && rangedAttackSpells.Count == 0))
+                    spell = choice;
             }
 
             //If not using an area effect spell, select a single target spell
             if (spell.BundleType == BundleTypes.None && rangedAttackSpells.Count > 0)
-                spell = rangedAttackSpells[Random.Range(0, rangedAttackSpells.Count)];
+            {
+                EffectBundleSettings choice = rangedAttackSpells[Random.Range(0, rangedAttackSpells.Count)];
+                if (AnalyzeTargetEffect(senses.Target, choice) == 1)
+                    spell = choice;
+            }
 
             if (spell.BundleType != BundleTypes.None)
             {
-                motor.SelectedSpell = new EntityEffectBundle(spell, behaviour);
+                EntityEffectBundle bundle = new EntityEffectBundle(spell, behaviour);
 
-                if (motor.EffectsAlreadyOnTarget(motor.SelectedSpell))
-                    return false;
+                bool alreadyAffected = motor.EffectsAlreadyOnTarget(bundle);
+                bool hasClearPath = motor.HasClearPathToShootProjectile(25f, DaggerfallMissile.ArmLength, 0.45f);
 
-                // Check that there is a clear path to shoot a spell
-                // All range spells are currently 25 speed and 0.45f radius
-                return motor.HasClearPathToShootProjectile(25f, DaggerfallMissile.ArmLength, 0.45f);
-            }
-            else
-            {
-                return false;
+                if (!alreadyAffected && hasClearPath)
+                {
+                    motor.SelectedSpell = bundle;
+                    return true;
+                }
             }
 
+            return false;
         }
 
 
+        /// <summary>
+        /// Our version of CanCastTouchSpell, replacing the one in EnemyMotor.
+        /// </summary>
         bool CanCastTouchSpell()
         {
             if (entity.CurrentMagicka <= 0)
@@ -180,52 +198,93 @@ namespace MonsterUniversity
             //Check if an caster-area effect spell is desired.
             if (areaAttackSpells.Count > 0)
             {
-                //EffectBundleSettings offering = areaAttackSpells[Random.Range(0, areaAttackSpells.Count)];
+                EffectBundleSettings choice = areaAttackSpells[Random.Range(0, areaAttackSpells.Count)];
 
-                int allyCount = 0;
-                int enemyCount = 0;
+                int tally = 0;
                 List<DaggerfallEntityBehaviour> entities = Utility.GetEntitiesInArea(transform.position, 4.3f);
+
                 foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
                 {
                     if (targetBehaviour == behaviour)
                         continue;
-                    else if (entity.Team == MobileTeams.PlayerAlly && targetBehaviour.EntityType == EntityTypes.Player)
-                        ++allyCount;
-                    else if (targetBehaviour.Entity.Team == entity.Team)
-                        ++allyCount;
-                    else if (entity.Team == MobileTeams.PlayerAlly)
-                    {
-                        EnemyMotor targetMotor = targetBehaviour.GetComponent<EnemyMotor>();
-                        if (targetMotor && targetMotor.IsHostile) //pacified enemies don't count as enemies to player allies
-                            ++enemyCount;
-                    }
-                    else
-                        ++enemyCount;
+
+                    tally += AnalyzeTargetEffect(targetBehaviour, choice);
                 }
 
-                if ((enemyCount > 1 || touchAttackSpells.Count == 0) && allyCount == 0)
-                    spell = areaAttackSpells[Random.Range(0, areaAttackSpells.Count)];
+                if (tally >= 2 || (tally >= 1 && touchAttackSpells.Count == 0))
+                    spell = choice;
             }
 
-            //If not using an area effect spell, select a single target spell
+            //If not using an area effect spell, select a single target touch spell
             if (spell.BundleType == BundleTypes.None && touchAttackSpells.Count > 0)
-                spell = touchAttackSpells[Random.Range(0, touchAttackSpells.Count)];
+            {
+                EffectBundleSettings choice = touchAttackSpells[Random.Range(0, touchAttackSpells.Count)];
+                if (AnalyzeTargetEffect(senses.Target, choice) == 1)
+                    spell = choice;
+            }
 
             if (spell.BundleType != BundleTypes.None)
             {
-                motor.SelectedSpell = new EntityEffectBundle(spell, behaviour);
+                EntityEffectBundle bundle = new EntityEffectBundle(spell, behaviour);
+                if (!motor.EffectsAlreadyOnTarget(bundle))
+                {
+                    motor.SelectedSpell = bundle;
+                    return true;
+                }
+            }
 
-                return !motor.EffectsAlreadyOnTarget(motor.SelectedSpell);
+            return false;
+        }
+
+
+        /// <summary>
+        /// Returns 1 if spell likely damages enemy, -1 if it likely damages ally, 0 otherwise
+        /// </summary>
+        int AnalyzeTargetEffect(DaggerfallEntityBehaviour target, EffectBundleSettings spell)
+        {
+            if (entity.Team == MobileTeams.PlayerAlly && target.EntityType == EntityTypes.Player)
+                return GuessImmunity(target, spell) ? 0 : -1;
+            else if (target.Entity.Team == entity.Team)
+                return GuessImmunity(target, spell) ? 0 : -1;
+            else if (entity.Team == MobileTeams.PlayerAlly)
+            {
+                EnemyMotor targetMotor = target.GetComponent<EnemyMotor>();
+                if (targetMotor && targetMotor.IsHostile)
+                    return GuessImmunity(target, spell) ? 0 : 1;
+                else
+                    return GuessImmunity(target, spell) ? 0 : -1;
             }
             else
+                return GuessImmunity(target, spell) ? 0 : 1;
+        }
+
+
+        /// <summary>
+        /// Tries to determine if target is immune to the spell, depending on intelligence check.
+        /// </summary>
+        bool GuessImmunity(DaggerfallEntityBehaviour target, EffectBundleSettings spell)
+        {
+            if (Dice100.FailedRoll(entity.Stats.LiveIntelligence))
+                return Dice100.SuccessRoll(50); //Ummm, duh, flip a coin.
+
+            switch (spell.ElementType)
             {
-                return false;
+                case ElementTypes.Cold:
+                    return target.Entity.Career.Frost == DaggerfallConnect.DFCareer.Tolerance.Immune;
+                case ElementTypes.Fire:
+                    return target.Entity.Career.Fire == DaggerfallConnect.DFCareer.Tolerance.Immune;
+                case ElementTypes.Magic:
+                    return target.Entity.Career.Magic == DaggerfallConnect.DFCareer.Tolerance.Immune;
+                case ElementTypes.Poison:
+                    return target.Entity.Career.Poison == DaggerfallConnect.DFCareer.Tolerance.Immune;
+                case ElementTypes.Shock:
+                    return target.Entity.Career.Shock == DaggerfallConnect.DFCareer.Tolerance.Immune;
+                default:
+                    return true;
             }
 
         }
 
-
-        int AnalyzeTargetEffect(DaggerfallEntityBehaviour target, )
 
         /// <summary>
         /// Check if a slowfall or levitate spell is needed and available.
@@ -235,7 +294,7 @@ namespace MonsterUniversity
             if (motor.Falls && !entity.IsSlowFalling && !entity.IsParalyzed)
             {
                 if (motor.LastGroundedY - transform.position.y < 5)
-                    return false;  //We haven't fallen far enough yet.  Don't cast...
+                    return false;  //We haven't fallen far enough yet.
 
                 if (levitateSpell.BundleType != BundleTypes.None)
                 {
@@ -367,7 +426,7 @@ namespace MonsterUniversity
             if (combatPrepSpell.BundleType == BundleTypes.None)
                 return false;
 
-            if (senses.Target == null)
+            if (senses.Target == null || senses.DetectedTarget == false)
                 return false;
 
             if (entity.Team == MobileTeams.PlayerAlly)
@@ -380,7 +439,11 @@ namespace MonsterUniversity
             if (IsSpellActive(combatPrepSpell))
                 return false;
 
-            return TryCast(combatPrepSpell);
+            //Check path to target.  Don't cast if target is in another room.
+            if (Utility.HasPath(transform.position, senses.Target.transform.position))
+                return TryCast(combatPrepSpell);
+            else
+                return false;
         }
 
 
@@ -395,7 +458,7 @@ namespace MonsterUniversity
             if (Time.frameCount % 20 != 0)
                 return false; //only checking occasionally
 
-            if (senses.Target == null)
+            if (senses.Target == null || senses.DetectedTarget == false)
                 return false;
 
             if (!motor.CanAct || mobile.IsPlayingOneShot())
@@ -404,22 +467,24 @@ namespace MonsterUniversity
             if (IsSpellActive(lightSpell))
                 return false;
 
-            if (MonsterUniversityMod.Instance.GetLightingOnEntity(senses.Target).grayscale > 0.15f)
+            if (MonsterUniversityMod.Instance.GetLightingOnEntity(senses.Target).grayscale > 0.2f)
                 return false; //enough light
 
-            return TryCast(lightSpell);
+            //Check path to target.  Don't cast if target is in another room.
+            if (Utility.HasPath(transform.position, senses.Target.transform.position))
+                return TryCast(lightSpell);
+            else
+                return false;
         }
 
 
         /// <summary>
-        /// Check if a healing spell is available and needed by the entity or nearby allies.  Cast it if so.
+        /// Check if a healing spell is available and needed by the entity or nearby allies.
         /// </summary>
         bool TryCastHealSpell()
         {
-            if (Time.time < lastHealCheck + 2.5f)
+            if (Time.time < nextHealCheck)
                 return false;
-
-            lastHealCheck = Time.time;
 
             if (!motor.CanAct || mobile.IsPlayingOneShot())
                 return false;
@@ -429,7 +494,7 @@ namespace MonsterUniversity
 
 
         /// <summary>
-        /// Check if a healing spell is needed and available.  Cast it if so.
+        /// Check if a healing spell is needed and available.
         /// </summary>
         bool TryCastHealSelf()
         {
@@ -442,12 +507,14 @@ namespace MonsterUniversity
             if (IsSpellActive(healSpell))
                 return false;
 
+            nextHealCheck = Time.time + Random.Range(2.1f, 4.8f);
+
             return TryCast(healSpell);
         }
 
 
         /// <summary>
-        /// Check if an area-effect healing spell is needed and available.  Cast it if so.
+        /// Check if an area-effect healing spell is needed and available.
         /// </summary>
         bool TryCastHealArea()
         {
@@ -462,7 +529,7 @@ namespace MonsterUniversity
 
             foreach (DaggerfallEntityBehaviour targetBehaviour in entities)
             {
-                bool needsHealing = targetBehaviour.Entity.CurrentHealth > 0.6f * targetBehaviour.Entity.MaxHealth;
+                bool needsHealing = targetBehaviour.Entity.CurrentHealth < 0.6f * targetBehaviour.Entity.MaxHealth;
 
                 if (targetBehaviour == behaviour)
                     continue;
@@ -475,9 +542,14 @@ namespace MonsterUniversity
             }
 
             if (allies > 0 && enemies == 0)
+            {
+                nextHealCheck = Time.time + Random.Range(2.1f, 5.2f);
                 return TryCast(healAreaSpell);
+            }
             else
+            {
                 return false;
+            }
         }
 
 
@@ -497,6 +569,7 @@ namespace MonsterUniversity
 
             Vector3 targetVector = (senses.LastKnownTargetPos - behaviour.transform.position);
 
+            //If on similar elevation, then skip.
             if (Mathf.Abs(targetVector.y) < 5)
                 return false;
 
@@ -511,6 +584,9 @@ namespace MonsterUniversity
         }
 
 
+        /// <summary>
+        /// If target is at a different elevation, check if it is possible to reach on foot.
+        /// </summary>
         bool HasPossibleWalkingPathToTarget()
         {
             if (GameManager.Instance.PlayerEnterExit.IsPlayerSubmerged)
@@ -525,7 +601,8 @@ namespace MonsterUniversity
             //shift upward closer to eye-height to reduce clipping through stairs and what-not
             startLocation += Vector3.up;
 
-            //checks how close the path is to the floor at various points
+            //Checks how close each point in the path is to the floor at various points.
+            //A big step up/down means levitation is required.
             float distance = Vector3.Distance(startLocation, destination);
             Vector3 offsetDirection = (destination - startLocation).normalized;
             float lastAltitude = GetAltitude(startLocation);
@@ -579,14 +656,13 @@ namespace MonsterUniversity
 
             if (effectManager.SetReadySpell(bundle))
             {
-                //???????????????????????????????
-                DaggerfallUI.AddHUDText("enemy casting " + spell.Name);
                 mobile.ChangeEnemyState(MobileStates.Spell);
-
                 return true;
             }
-
-            return false;
+            else
+            {
+                return false;
+            }
         }
 
 
@@ -646,6 +722,8 @@ namespace MonsterUniversity
                 else if (spell.Effects[0].Key == SpellReflection.EffectKey)
                     combatPrepSpells.Add(spell);
                 else if (spell.Effects[0].Key == SpellResistance.EffectKey)
+                    combatPrepSpells.Add(spell);
+                else if (spell.Effects[0].Key == Shield.EffectKey)
                     combatPrepSpells.Add(spell);
                 else if (spell.Effects[0].Key == Slowfall.EffectKey)
                     slowfallSpell = spell;
