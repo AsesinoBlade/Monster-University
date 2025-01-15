@@ -221,11 +221,14 @@ namespace MonsterUniversity
         {
             try
             {
-                AdjustEnemy(enemy);
+                if (enemy != null)
+                    AdjustEnemy(enemy);
             }
             catch (Exception e)
             {
+#if !UNITY_EDITOR
                 Debug.LogError($"Monster-University OnEnemySpawn/AdjustEnemy: {e.Message}");
+#endif
             }
         }
 
@@ -236,11 +239,15 @@ namespace MonsterUniversity
         void AdjustEnemy(GameObject enemy)
         {
             DaggerfallEntityBehaviour behaviour = enemy.GetComponent<DaggerfallEntityBehaviour>();
+            if (behaviour == null)
+                return;
 
             EnemyEntity entity = behaviour.Entity as EnemyEntity;
 
             //Seed random to keep values consistent on save/reload.
             DaggerfallEnemy dfEnemy = behaviour.GetComponent<DaggerfallEnemy>();
+            if (dfEnemy == null)
+                return;
 
             if (dfEnemy.LoadID != 0)
                 UnityEngine.Random.InitState((int)dfEnemy.LoadID);

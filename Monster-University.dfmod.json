@@ -18,6 +18,7 @@
         "Assets/Game/Mods/Monster-University/Scripts/EnemySensesEnhancement.cs",
         "Assets/Game/Mods/Monster-University/Monster-University.dfmod.json"
     ],
+    "ModPreCompile": true,
     "Dependencies": [
         {
             "Name": "first-person-lighting",
